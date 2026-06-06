@@ -48,7 +48,7 @@ NOTES:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import admin, donors, patients, supply_routes
+from .routers import admin, chat, donors, patients, supply_routes
 
 app = FastAPI(
     title="ThalNet API",
@@ -76,7 +76,7 @@ app.include_router(supply_routes.router)
 # Public portals
 app.include_router(donors.router)
 app.include_router(patients.router)
-
+app.include_router(chat.router)
 
 
 # ===== HEALTH & STATUS =====
