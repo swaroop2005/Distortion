@@ -31,9 +31,40 @@ def test_compose_chat_reply_missing_facts_is_honest():
     assert reply.strip()
 
 
+def test_classify_intent_wellness():
+    m = MockLLM()
+    assert m.classify_intent("what should I eat to stay healthy?")["intent"] == "wellness"
+    assert m.classify_intent("any tips for me?")["intent"] == "wellness"
+
+
+def test_compose_wellness_reply_has_disclaimer_and_caution():
+    from backend.app.services.outreach import WELLNESS_DISCLAIMER
+    m = MockLLM()
+    facts = {
+        "suggestions": ["Avoid excess iron per your doctor.", "Stay hydrated."],
+        "caution": "Avoid excess iron per your doctor.",
+    }
+    reply = m.compose_chat_reply(facts, {"role": "patient"}, "en")
+    assert WELLNESS_DISCLAIMER in reply
+    assert "important note" in reply.lower()  # caution surfaced first
+    assert "hydrated" in reply
+
+
+def test_compose_wellness_reply_no_caution_still_has_disclaimer():
+    from backend.app.services.outreach import WELLNESS_DISCLAIMER
+    m = MockLLM()
+    reply = m.compose_chat_reply({"suggestions": ["Stay hydrated."]}, {"role": "donor"}, "en")
+    assert WELLNESS_DISCLAIMER in reply          # disclaimer fires even with no caution
+    assert "important note" not in reply.lower()  # no caution => no caution preamble
+    assert "hydrated" in reply
+
+
 if __name__ == "__main__":
     test_classify_intent_labels()
     test_classify_intent_hindi_telugu()
     test_compose_chat_reply_uses_facts_only()
     test_compose_chat_reply_missing_facts_is_honest()
+    test_classify_intent_wellness()
+    test_compose_wellness_reply_has_disclaimer_and_caution()
+    test_compose_wellness_reply_no_caution_still_has_disclaimer()
     print("test_outreach_chat OK")

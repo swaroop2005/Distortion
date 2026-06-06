@@ -80,6 +80,45 @@ def test_blood_group_extraction_ab():
     assert _extract_blood_group("is O+ available") == normalize_blood_group("O+")
 
 
+def test_wellness_patient_has_caution_and_disclaimer():
+    from backend.app.services.outreach import WELLNESS_DISCLAIMER
+    res = chatbot.handle_chat("what should I eat?", role="patient", user_id=_a_patient_id())
+    assert res["intent"] == "wellness"
+    assert "suggestions" in res["grounded_facts"]
+    assert res["grounded_facts"]["caution"]  # iron caution present for a patient
+    assert WELLNESS_DISCLAIMER in res["reply"]
+    assert res["sources"]
+
+
+def test_wellness_donor_no_iron_caution():
+    res = chatbot.handle_chat("what should I eat?", role="donor", user_id=_a_donor_id())
+    assert res["intent"] == "wellness"
+    assert res["grounded_facts"]["suggestions"]
+    assert res["grounded_facts"].get("caution") is None  # donors get no iron-overload caution
+
+
+def test_wellness_public_general_only():
+    from backend.app.services.outreach import WELLNESS_DISCLAIMER
+    res = chatbot.handle_chat("any tips to stay healthy?", role="public", user_id=None)
+    assert res["intent"] == "wellness"
+    assert res["grounded_facts"]["suggestions"]
+    assert WELLNESS_DISCLAIMER in res["reply"]
+
+
+def test_faq_still_routes_to_faq():
+    """Wellness must not cannibalize the factual FAQ intent."""
+    res = chatbot.handle_chat("what is thalassemia?", role="public", user_id=None)
+    assert res["intent"] == "general_faq"
+
+
+def test_wellness_emotional_distress_reaches_wellness():
+    from backend.app.services import wellness
+    assert wellness.detect_topic("I feel sad and stressed") == "emotional"
+    res = chatbot.handle_chat("I feel sad and stressed", role="patient", user_id=_a_patient_id())
+    assert res["intent"] == "wellness"
+    assert res["grounded_facts"]["suggestions"]
+
+
 if __name__ == "__main__":
     test_personal_eligibility_grounded()
     test_bridge_status_intent()
@@ -90,4 +129,9 @@ if __name__ == "__main__":
     test_unknown_user_no_fabrication()
     test_language_detection()
     test_blood_group_extraction_ab()
+    test_wellness_patient_has_caution_and_disclaimer()
+    test_wellness_donor_no_iron_caution()
+    test_wellness_public_general_only()
+    test_faq_still_routes_to_faq()
+    test_wellness_emotional_distress_reaches_wellness()
     print("test_chatbot OK")
