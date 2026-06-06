@@ -1,2 +1,1 @@
-from_district,to_district,blood_group,units,distance_km,reason
-Rangareddy,Hyderabad,AB-,4,19.8,"4u AB- surplus→deficit, 19.8 km"
+mode,blood_group,units,distance_km,from_bank,from_district,from_type,from_capacity,to_bank,to_district,to_type,to_capacity,reason
