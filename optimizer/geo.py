@@ -75,6 +75,25 @@ def district_distance(d1: str, d2: str) -> float:
     return SAME_STATE
 
 
+def bank_distance(b1: dict, b2: dict) -> float:
+    """Distance between two bank nodes.
+
+    Uses centroid haversine when both have coordinates; otherwise a tiered proxy
+    on district/state (same district = 0, same state = SAME_STATE, else CROSS_STATE).
+    """
+    if b1["id"] == b2["id"]:
+        return SAME_DISTRICT
+    if b1.get("lat") is not None and b2.get("lat") is not None:
+        d = haversine_km((b1["lat"], b1["lng"]), (b2["lat"], b2["lng"]))
+        # banks in the same district share a centroid -> nudge off zero
+        return round(d, 1) if d > 0 else 5.0
+    if b1["district"] and b1["district"] == b2["district"]:
+        return 5.0
+    if b1["state"] and b1["state"] == b2["state"]:
+        return SAME_STATE
+    return CROSS_STATE
+
+
 def point_distance_km(lat: float, lng: float, district: str) -> float:
     """Distance from a (lat,lng) point to a district centroid; large if unknown."""
     c = TELANGANA_CENTROIDS.get(district)

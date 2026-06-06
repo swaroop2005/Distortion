@@ -13,12 +13,13 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
+from .banks import load_banks
 from .config import Settings
 from .demand import build_demand
 from .gap import compute_group_gaps
 from .geo import TELANGANA_CENTROIDS
 from .mobilization import build_mobilization_plan
-from .redistribution import optimize_redistribution
+from .redistribution import redistribute_demand
 from .supply import build_supply
 
 # Scenario ladder: label + demand multiplier. Baseline = the raw sample.
@@ -79,11 +80,13 @@ def _district_rows(demand: dict, supply: dict, transfers: list[dict], mob: list[
 def _scenario_data(scale: float) -> dict:
     s = Settings()
     s.demand_scale = scale
+    s.mode = "demand"
     s.use_solver = True  # falls back to greedy automatically if PuLP absent
     demand = build_demand(s)
     supply = build_supply(s)
     gaps = compute_group_gaps(demand, supply)
-    transfers, residual = optimize_redistribution(demand, supply, s)
+    region_banks = load_banks(s, national=False)
+    transfers, residual = redistribute_demand(region_banks, demand, s)
     mob = build_mobilization_plan(residual, s)
 
     cov = _coverage_rows(gaps)
@@ -107,7 +110,14 @@ def _scenario_data(scale: float) -> dict:
         },
         "coverage": cov,
         "districts": _district_rows(demand, supply, transfers, mob),
-        "top_transfers": sorted(transfers, key=lambda t: -t["units"])[:15],
+        "top_transfers": [
+            {"from_bank": t["from_bank"], "from_district": t["from_district"],
+             "from_type": t["from_type"], "from_capacity": t["from_capacity"],
+             "to_bank": t["to_bank"], "to_district": t["to_district"],
+             "blood_group": t["blood_group"], "units": t["units"],
+             "distance_km": t["distance_km"]}
+            for t in sorted(transfers, key=lambda t: -t["units"])[:15]
+        ],
         "mobilization_by_group": sorted(
             ({"group": g, "count": n} for g, n in mob_by_group.items()),
             key=lambda x: -x["count"],
@@ -199,6 +209,8 @@ _TEMPLATE = r"""<!DOCTYPE html>
   .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;color:#fff}
   .pill.CRITICAL{background:var(--crit)} .pill.LOW{background:var(--low)} .pill.OK{background:var(--ok)}
   .grp{font-weight:700;color:var(--navy)}
+  .bk{font-weight:600;color:var(--ink);line-height:1.2}
+  .sub2{font-size:11px;color:var(--muted);margin-top:2px}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
   .legend{font-size:11px;color:var(--muted);padding:8px 18px;border-top:1px solid var(--line);
           display:flex;gap:16px;flex-wrap:wrap}
@@ -332,10 +344,14 @@ function renderCoverage(s){
 
 function renderTransfers(s){
   const t=s.top_transfers;
-  let h='<thead><tr><th>From</th><th>To</th><th>Grp</th><th class="num">Units</th><th class="num">km</th></tr></thead><tbody>';
+  let h='<thead><tr><th>From bank</th><th>To bank</th><th>Grp</th><th class="num">Units</th><th class="num">km</th></tr></thead><tbody>';
   if(!t.length) h+='<tr><td colspan="5" style="color:var(--muted)">No transfers needed — supply is balanced.</td></tr>';
-  t.forEach(x=>{h+='<tr><td>'+x.from_district+'</td><td>'+x.to_district+'</td><td class="grp">'+x.blood_group+
-    '</td><td class="num">'+fmt(x.units)+'</td><td class="num">'+x.distance_km+'</td></tr>';});
+  t.forEach(x=>{
+    h+='<tr><td><div class="bk">'+x.from_bank+'</div><div class="sub2">'+x.from_district+
+       ' · '+(x.from_type||'—')+' · cap '+fmt(x.from_capacity)+'</div></td>'+
+       '<td><div class="bk">'+x.to_bank+'</div><div class="sub2">'+x.to_district+'</div></td>'+
+       '<td class="grp">'+x.blood_group+'</td><td class="num">'+fmt(x.units)+
+       '</td><td class="num">'+x.distance_km+'</td></tr>';});
   document.getElementById('transfers').innerHTML=h+'</tbody>';
 }
 

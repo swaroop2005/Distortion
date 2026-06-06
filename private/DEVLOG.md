@@ -88,4 +88,16 @@
 - **Verified:** generates clean; `__DATA__` replaced; embedded JSON parses for all 3 scenarios; brace/paren/bracket balance OK (no node in env to full-lint). Baseline 0 crit, moderate 1 low/3355 donors, surge 1 crit/4 low/4212 donors.
 - **View:** open the HTML in a browser / IDE live-preview; host on S3/Amplify. Committed to `swaroop/dev`.
 
+### Bank-level optimizer + both CSVs (2026-06-06)
+- **Why:** user noted `blood_banks.csv` was unused and `blood_stock_long.csv` was only used aggregated to district. Reworked the optimizer to reason about **individual banks**.
+- **New `banks.py`:** joins `blood_banks.csv` (registry: name, address, district, type, total capacity, contacts, online) with per-bank red-cell stock from `blood_stock_long.csv` → bank nodes with coords (Telangana centroids).
+- **Rewrote `redistribution.py` to bank→bank**, two modes (user chose **both**):
+  - `demand` (Telangana): surplus banks ship to the hub (largest) bank of each deficit district; residual → mobilization.
+  - `rebalance` (national): bring every bank to `--safety-stock` per group; below-safety banks pull from nearby surplus; leftovers → `under_safety.csv`.
+  - Generic transshipment: PuLP MILP for small instances, greedy fallback (and forced greedy when source×sink pairs > 4000 to keep national fast).
+  - Every transfer now carries from/to **bank name, district, type, capacity, distance_km** (user asked for these, like the map).
+- **Wired:** `config` (mode, safety_stock), `run` (`--mode`, `--safety-stock`), `report` (bank-level transfer cols + under_safety.csv), `geo.bank_distance`. `dashboard.py` updated to render bank-level transfers (name/district/type/capacity) and use the new API.
+- **Smoke tests:** demand@scale10 → 558 bank→bank moves (real names: Apollo, Indian Red Cross…), 3,355 donors. rebalance national → 7,183 moves/27,830 units; 5,957 bank×group still below safety = honest finding (national safety stock > available surplus). Dashboard regenerated + JSON/JS validated.
+- **Known modeling note:** demand-mode funnels most transfers to Apollo (Hyderabad) because Hyderabad dominates both demand and is its district's largest hub bank. Acceptable for demo; could spread across multiple receiving banks later.
+
 <!-- next entries below -->

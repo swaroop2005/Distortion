@@ -3,12 +3,15 @@
 Predicts blood **shortages** and optimizes the **response** — inter-bank
 redistribution plus donor mobilization — for the Blood Warriors network.
 
-It joins our two data assets:
+It joins three data assets at **bank granularity**:
 
-* **Supply** — `data/blood_stock_long.csv`, the live national blood-bank inventory
-  scraped by the `project/` pipeline.
-* **Demand** — `Dataset.csv`, the provided donor/patient dataset (Bridge patients'
-  recurring transfusion schedules + the donor pool).
+* **Supply** — `data/blood_stock_long.csv`, live per-bank inventory scraped by the
+  `project/` pipeline (available units by component & blood group).
+* **Bank registry** — `data/blood_banks.csv`, used to enrich every bank with its
+  name, address, district, type, total capacity, and contacts so each recommended
+  transfer names a real source and destination bank.
+* **Demand** — `Dataset.csv`, the provided dataset (Bridge patients' recurring
+  transfusion schedules + the donor pool).
 
 It is the **supply/inventory** counterpart to the teammate's **ThalNet** (donor
 matching + autonomous outreach). The mobilization plan this engine emits is shaped
@@ -28,13 +31,19 @@ to be ThalNet's outreach input.
    Packed Red Blood Cells — the thalassemia need) per district & blood group.
 3. **Gap & coverage** (`gap.py`) — per blood group: `days_of_coverage = supply /
    daily_demand`, classified **CRITICAL** (<3d) / **LOW** (<7d) / **OK**.
-4. **Optimize**
-   * **Redistribution** (`redistribution.py`) — integer transshipment: surplus
-     districts ship to deficit districts, minimizing unmet demand then transport
-     distance. Solved with **PuLP/CBC** when installed, else a deterministic
-     **greedy** fallback.
-   * **Mobilization** (`mobilization.py`) — residual deficits → the nearest eligible,
-     compatible donors needed to close the gap (the **ThalNet hand-off**).
+4. **Optimize** — **bank-to-bank** integer transshipment (`redistribution.py`,
+   `banks.py`). Every transfer names a real source and destination bank with its
+   district, type, capacity, and the distance between them. Two modes:
+   * **`demand`** (Telangana) — cover patient-demand deficits per district: surplus
+     banks ship to the hub bank of each deficit district.
+   * **`rebalance`** (national) — bring every bank up to a safety-stock level per
+     blood group; below-safety banks pull from nearby surplus banks. Banks left
+     below safety are reported in `under_safety.csv`.
+   * **`both`** runs demand (TG) + rebalance (national).
+   Solved with **PuLP/CBC** for small instances, else a deterministic **greedy**
+   nearest-source fallback (also used for the large national instance).
+   * **Mobilization** (`mobilization.py`) — residual demand deficits → the nearest
+     eligible, compatible donors needed to close the gap (the **ThalNet hand-off**).
 
 ---
 
@@ -45,8 +54,10 @@ to be ThalNet's outreach input.
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r optimizer/requirements.txt        # optional: enables the exact MILP
 
-python -m optimizer.run                           # Telangana, 30-day horizon
-python -m optimizer.run --horizon-days 14
+python -m optimizer.run                           # demand mode, Telangana, 30 days
+python -m optimizer.run --mode rebalance          # national safety-stock rebalance
+python -m optimizer.run --mode both               # both modes
+python -m optimizer.run --safety-stock 10         # rebalance target per bank/group
 python -m optimizer.run --demand-scale 30         # model the real patient load
 python -m optimizer.run --greedy                  # skip the MILP solver
 python -m optimizer.run --allow-substitution      # allow O-/ABO-compatible donors
@@ -86,8 +97,9 @@ is untouched.
 | File | One row per | Key columns |
 |---|---|---|
 | `shortage_report.csv` | blood group | supply_units, horizon_demand, daily_demand, days_of_coverage, status, shortfall_units |
-| `transfer_plan.csv` | recommended transfer | from_district, to_district, blood_group, units, distance_km, reason |
+| `transfer_plan.csv` | recommended bank→bank transfer | mode, blood_group, units, distance_km, from_bank, from_district, from_type, from_capacity, to_bank, to_district, to_type, to_capacity, reason |
 | `mobilization_plan.csv` | donor to recruit | region, district, blood_group, donor_id, distance_km, eligibility, rank, units_contributed |
+| `under_safety.csv` | bank below safety (rebalance) | bank, district, state, blood_group, short_units |
 
 A command-center summary is also printed to the console.
 
