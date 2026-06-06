@@ -82,6 +82,86 @@ def test_find_matches_eligible_sorted_by_distance():
     assert dists == sorted(dists), "eligible matches must be ordered nearest-first"
 
 
+def _request_and_compatible_donor():
+    """Create a request and return (request, a real compatible donor_id)."""
+    cs._reset()
+    p = _a_patient()
+    req = cs.create_request(p["user_id"], p["blood_group"], "Hyderabad", 2, "2026-06-09")
+    donor_id = cs.find_matches(req["request_id"], limit=1)[0]["donor_id"]
+    return req, donor_id
+
+
+def test_send_connection_pending():
+    req, donor_id = _request_and_compatible_donor()
+    conn = cs.send_connection(req["request_id"], req["patient_id"], donor_id)
+    assert conn["status"] == "pending"
+    assert conn["donor_id"] == donor_id
+
+
+def test_send_connection_wrong_patient_forbidden():
+    req, donor_id = _request_and_compatible_donor()
+    try:
+        cs.send_connection(req["request_id"], "SOMEONE-ELSE", donor_id)
+        assert False, "expected Forbidden"
+    except cs.Forbidden:
+        pass
+
+
+def test_send_connection_incompatible_donor_badstate():
+    req, donor_id = _request_and_compatible_donor()
+    compatible = {m["donor_id"] for m in cs.find_matches(req["request_id"], limit=10000)}
+    from backend.app.services.store import all_donors
+    incompatible = next(str(d["user_id"]) for d in all_donors()
+                        if str(d["user_id"]) not in compatible)
+    try:
+        cs.send_connection(req["request_id"], req["patient_id"], incompatible)
+        assert False, "expected BadState"
+    except cs.BadState:
+        pass
+
+
+def test_send_connection_duplicate_conflict():
+    req, donor_id = _request_and_compatible_donor()
+    cs.send_connection(req["request_id"], req["patient_id"], donor_id)
+    try:
+        cs.send_connection(req["request_id"], req["patient_id"], donor_id)
+        assert False, "expected Conflict"
+    except cs.Conflict:
+        pass
+
+
+def test_donor_accepts():
+    req, donor_id = _request_and_compatible_donor()
+    conn = cs.send_connection(req["request_id"], req["patient_id"], donor_id)
+    out = cs.respond_connection(conn["connection_id"], donor_id, "accept")
+    assert out["status"] == "accepted"
+    assert out["responded_at"]
+
+
+def test_wrong_donor_cannot_respond():
+    req, donor_id = _request_and_compatible_donor()
+    conn = cs.send_connection(req["request_id"], req["patient_id"], donor_id)
+    try:
+        cs.respond_connection(conn["connection_id"], "OTHER-DONOR", "accept")
+        assert False, "expected Forbidden"
+    except cs.Forbidden:
+        pass
+
+
+def test_patient_cancels():
+    req, donor_id = _request_and_compatible_donor()
+    conn = cs.send_connection(req["request_id"], req["patient_id"], donor_id)
+    out = cs.cancel_connection(conn["connection_id"], req["patient_id"])
+    assert out["status"] == "cancelled"
+
+
+def test_list_connections_by_role():
+    req, donor_id = _request_and_compatible_donor()
+    conn = cs.send_connection(req["request_id"], req["patient_id"], donor_id)
+    assert conn in cs.list_connections(req["patient_id"], "patient")
+    assert conn in cs.list_connections(donor_id, "donor")
+
+
 if __name__ == "__main__":
     test_create_and_get_request()
     test_create_request_unknown_patient()
@@ -90,4 +170,12 @@ if __name__ == "__main__":
     test_find_matches_eligible_first_then_nearest()
     test_find_matches_unknown_request()
     test_find_matches_eligible_sorted_by_distance()
+    test_send_connection_pending()
+    test_send_connection_wrong_patient_forbidden()
+    test_send_connection_incompatible_donor_badstate()
+    test_send_connection_duplicate_conflict()
+    test_donor_accepts()
+    test_wrong_donor_cannot_respond()
+    test_patient_cancels()
+    test_list_connections_by_role()
     print("test_community_store OK")

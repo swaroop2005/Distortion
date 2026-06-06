@@ -140,3 +140,80 @@ def find_matches(request_id, limit: int = 20) -> list[dict]:
     matches.sort(key=lambda m: (not m["eligible"],
                                 m["distance_km"] if m["distance_km"] is not None else 1e9))
     return matches[:limit]
+
+
+# ── Connection handshake ──────────────────────────────────────────────────
+def send_connection(request_id, patient_id, donor_id) -> dict:
+    """Patient sends a connection request to a blood-compatible donor."""
+    req = _requests.get(request_id)
+    if not req:
+        raise NotFound(f"request {request_id} not found")
+    if req["patient_id"] != str(patient_id):
+        raise Forbidden("not your request")
+    donor = get_donor(donor_id)
+    if not donor:
+        raise NotFound(f"donor {donor_id} not found")
+    if not can_donate(donor.get("blood_group"), req["blood_group"]):
+        raise BadState("donor is not blood-compatible with this request")
+    did = str(donor_id)
+    for c in _connections.values():
+        if (c["request_id"] == request_id and c["donor_id"] == did
+                and c["status"] in ("pending", "accepted")):
+            raise Conflict("already connected to this donor for this request")
+    cid = _new_id()
+    conn = {
+        "connection_id": cid,
+        "request_id": request_id,
+        "patient_id": str(patient_id),
+        "donor_id": did,
+        "status": "pending",
+        "created": _now(),
+        "responded_at": None,
+    }
+    _connections[cid] = conn
+    return conn
+
+
+def respond_connection(connection_id, donor_id, action) -> dict:
+    """Donor accepts or declines a pending connection."""
+    conn = _connections.get(connection_id)
+    if not conn:
+        raise NotFound(f"connection {connection_id} not found")
+    if conn["donor_id"] != str(donor_id):
+        raise Forbidden("not the target donor")
+    if conn["status"] != "pending":
+        raise BadState(f"connection is {conn['status']}, not pending")
+    if action == "accept":
+        conn["status"] = "accepted"
+    elif action == "decline":
+        conn["status"] = "declined"
+    else:
+        raise BadState(f"invalid action: {action}")
+    conn["responded_at"] = _now()
+    return conn
+
+
+def cancel_connection(connection_id, patient_id) -> dict:
+    """Owning patient cancels a non-terminal connection."""
+    conn = _connections.get(connection_id)
+    if not conn:
+        raise NotFound(f"connection {connection_id} not found")
+    if conn["patient_id"] != str(patient_id):
+        raise Forbidden("not your connection")
+    if conn["status"] in ("declined", "cancelled"):
+        raise BadState(f"connection is already {conn['status']}")
+    conn["status"] = "cancelled"
+    return conn
+
+
+def get_connection(connection_id) -> Optional[dict]:
+    return _connections.get(connection_id)
+
+
+def list_connections(user_id, role) -> list[dict]:
+    uid = str(user_id)
+    if role == "patient":
+        return [c for c in _connections.values() if c["patient_id"] == uid]
+    if role == "donor":
+        return [c for c in _connections.values() if c["donor_id"] == uid]
+    return []
