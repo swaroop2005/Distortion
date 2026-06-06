@@ -112,4 +112,24 @@
 - **Changes:** added `STATE_CENTROIDS` (35 states) to `geo.py`; added `from_state`/`to_state` to transfer records; rewrote `dashboard.py` with a **scope toggle** (India / Telangana) embedding both datasets. India view = national KPIs, supply-by-group chart, state-level Leaflet map (markers ∝ units, inter-state rebalance flow lines), top rebalance transfers (bank names + states), top states by units. Telangana view unchanged (demand scenarios).
 - **Verified:** India = 35 states, 3,670 red-cell banks, 225,386 units, 7,183 rebalance transfers, 5,957 bank×group below safety; top state UP (35,262 u). JS balanced; html 53 KB. Served live on localhost:8765 for the user to view.
 
+### Repo review + AWS guide read + clarifications (2026-06-06)
+- **Read the full 28-page AWS guide.** Key clarifications:
+  - **Bedrock is NOT blocked by the $40 guest account.** It just needs a one-time enable:
+    Bedrock console (us-east-1) → **Model access → Modify → tick Claude 3 Haiku → request**
+    (instant for most). Then code can `InvokeModel`. Use **Haiku** (~10× cheaper than Sonnet).
+  - **Set an AWS Budgets alarm to $40 first** (Billing → Budgets, §14.1) — emails at 80%/100%.
+  - End-of-event: terminate EC2, delete RDS/EKS/NAT/S3-big, confirm spend ~0 (§14.3).
+- **Full repo state:** `main` = scraper (`project/`) + bank-level optimizer + India/TG dashboard
+  (Layer 1, DONE) + teammate's `backend/` FastAPI skeleton + `scripts/clean_data.py` +
+  `data/clean.csv`. Layer 2 (ML, agents, UI, deploy) mostly TODO. **Seam (mobilization_plan →
+  Triage) not wired yet** — that's the main integration gap.
+- **Next WORK items (no AWS needed first):** (1) **Triage/seam engine** — mobilization_plan +
+  donors + scores → ranked reasoned shortlist (input to Outreach); (2) **ML models** on
+  clean.csv (Model B churn strong; Model A "responsiveness" proxy — be honest); (3) **FastAPI
+  over real data** (serve shortages/transfers/mobilization). Then (console): enable Bedrock
+  Haiku + budget alarm, install aws CLI + node/npm, then Outreach agent → Step Functions →
+  React UI → deploy.
+- **Env note:** node/npm + aws CLI not installed on the machine → UI + deploy blocked until then.
+- (Personal handoff snapshot kept locally in gitignored `private/SESSION_CONTEXT.md`.)
+
 <!-- next entries below -->
