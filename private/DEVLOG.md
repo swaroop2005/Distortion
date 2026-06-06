@@ -67,5 +67,7 @@
 - **Why it's OK:** repo is private (confirmed) → robots/authorization notes and institutional blood-bank contact fields are not publicly exposed.
 - **gitignore change:** now only `logs/` is ignored; `private/` (devlog + specs) and `data/` (CSVs) are tracked. Note: folder is still literally named `private/` — offered to rename to `docs/` if preferred.
 - **Note:** `gh` CLI not installed; pushing over the existing SSH remote.
+- **Push outcome:** first push rejected (non-fast-forward) — teammate had pushed 2 commits adding `docs/DESIGN.md` + `PROGRESS.md` (a "ThalNet" sub-project: 3-agent framing, medical honesty, phenotype-as-scale-path). No path collisions with our `project/`/`data/`/`private/`, so `git rebase origin/main` was clean. Pushed: `05c919b..6222c62 main`. **Workflow going forward: commit + push the DEVLOG with each work increment.**
+- **Teammate context noted:** parallel track is "ThalNet" (design + progress doc on `main`). Worth reconciling our blood-stock pipeline with their design later.
 
 <!-- next entries below -->
