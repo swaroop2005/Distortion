@@ -100,3 +100,41 @@ def list_requests(patient_id=None) -> list[dict]:
         return list(_requests.values())
     pid = str(patient_id)
     return [r for r in _requests.values() if r["patient_id"] == pid]
+
+
+# ── Matching (simple + honest: compatible, annotated, distance-sorted; no ML) ─
+def _distance_km(donor: dict, patient: Optional[dict]) -> Optional[float]:
+    if not patient:
+        return None
+    km = donor_patient_km(donor, patient)
+    if km is None or (isinstance(km, float) and math.isnan(km)):
+        return None
+    return round(km, 1)
+
+
+def find_matches(request_id, limit: int = 20) -> list[dict]:
+    """Blood-compatible donors for a request, eligible-first then nearest.
+
+    No ML ranking — shows facts (compatible, distance, eligibility) so the
+    patient can choose. Compatibility is a hard filter.
+    """
+    req = _requests.get(request_id)
+    if not req:
+        raise NotFound(f"request {request_id} not found")
+    patient = get_patient(req["patient_id"])
+    matches = []
+    for d in all_donors():
+        if not can_donate(d.get("blood_group"), req["blood_group"]):
+            continue
+        dte = days_until_eligible(d)
+        matches.append({
+            "donor_id": str(d.get("user_id", "")),
+            "blood_group": normalize_blood_group(d.get("blood_group")),
+            "distance_km": _distance_km(d, patient),
+            "eligible": is_eligible(d),
+            "days_until_eligible": max(0, dte),
+        })
+    # eligible-first (False sorts before True via `not`), then nearest (None last)
+    matches.sort(key=lambda m: (not m["eligible"],
+                                m["distance_km"] if m["distance_km"] is not None else 1e9))
+    return matches[:limit]
