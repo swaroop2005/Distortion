@@ -32,4 +32,10 @@ dist/
 build/
 npm-debug.log*
 
+# --- Logs (rotating runtime logs; regenerated, noisy) ---
+logs/
+
+# NOTE: private/ (devlog + design specs) and data/ (collected CSVs) are now
+# intentionally committed to this PRIVATE repo, per team decision 2026-06-06.
+
 # NOTE: Dataset.csv and the hackathon PDFs are intentionally committed.

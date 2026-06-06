@@ -1,0 +1,176 @@
+{
+  "generated_at": "2026-06-06T07:48:53.861421+00:00",
+  "source": "https://www.bloodwarriors.in/api/public/eraktkosh/blood-availability",
+  "states": [
+    {
+      "name": "Andaman And Nicobar Islands",
+      "code": 35
+    },
+    {
+      "name": "Andhra Pradesh",
+      "code": 28
+    },
+    {
+      "name": "Arunachal Pradesh",
+      "code": 12
+    },
+    {
+      "name": "Assam",
+      "code": 18
+    },
+    {
+      "name": "Bihar",
+      "code": 10
+    },
+    {
+      "name": "Chandigarh",
+      "code": 94
+    },
+    {
+      "name": "Chhattisgarh",
+      "code": 22
+    },
+    {
+      "name": "Dadra And Nagar Haveli And Daman And Diu",
+      "code": 25
+    },
+    {
+      "name": "Delhi",
+      "code": 97
+    },
+    {
+      "name": "Goa",
+      "code": 30
+    },
+    {
+      "name": "Gujarat",
+      "code": 24
+    },
+    {
+      "name": "Haryana",
+      "code": 96
+    },
+    {
+      "name": "Himachal Pradesh",
+      "code": 92
+    },
+    {
+      "name": "Jammu And Kashmir",
+      "code": 91
+    },
+    {
+      "name": "Jharkhand",
+      "code": 20
+    },
+    {
+      "name": "Karnataka",
+      "code": 29
+    },
+    {
+      "name": "Kerala",
+      "code": 32
+    },
+    {
+      "name": "Ladakh",
+      "code": 37
+    },
+    {
+      "name": "Madhya Pradesh",
+      "code": 23
+    },
+    {
+      "name": "Maharashtra",
+      "code": 27
+    },
+    {
+      "name": "Manipur",
+      "code": 14
+    },
+    {
+      "name": "Meghalaya",
+      "code": 17
+    },
+    {
+      "name": "Mizoram",
+      "code": 15
+    },
+    {
+      "name": "Nagaland",
+      "code": 13
+    },
+    {
+      "name": "Odisha",
+      "code": 21
+    },
+    {
+      "name": "Puducherry",
+      "code": 34
+    },
+    {
+      "name": "Punjab",
+      "code": 93
+    },
+    {
+      "name": "Rajasthan",
+      "code": 98
+    },
+    {
+      "name": "Sikkim",
+      "code": 11
+    },
+    {
+      "name": "Tamil Nadu",
+      "code": 33
+    },
+    {
+      "name": "Telangana",
+      "code": 36
+    },
+    {
+      "name": "Tripura",
+      "code": 16
+    },
+    {
+      "name": "Uttar Pradesh",
+      "code": 99
+    },
+    {
+      "name": "Uttarakhand",
+      "code": 95
+    },
+    {
+      "name": "West Bengal",
+      "code": 19
+    }
+  ],
+  "blood_groups": [
+    "A+Ve",
+    "A-Ve",
+    "B+Ve",
+    "B-Ve",
+    "O+Ve",
+    "O-Ve",
+    "AB+Ve",
+    "AB-Ve",
+    "Oh+VE",
+    "Oh-VE"
+  ],
+  "components": [
+    "Whole Blood",
+    "Packed Red Blood Cells",
+    "Fresh Frozen Plasma",
+    "Single Donor Platelet",
+    "Random Donor Platelets",
+    "Platelet Concentrate",
+    "Plasma",
+    "Cryoprecipitate",
+    "Cryo Poor Plasma"
+  ],
+  "hospital_types": [
+    "Govt.",
+    "Private",
+    "Charitable/Vol",
+    "Red Cross"
+  ],
+  "districts_by_state": {}
+}

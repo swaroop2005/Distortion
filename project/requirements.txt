@@ -1,0 +1,11 @@
+# Core pipeline dependencies
+requests>=2.31
+pandas>=2.0
+beautifulsoup4>=4.12
+lxml>=4.9
+tqdm>=4.66
+
+# Optional — only needed if a future target requires JavaScript rendering.
+# The current target (bloodwarriors.in) exposes a clean JSON API, so Playwright
+# is NOT required. Uncomment and run `playwright install chromium` to enable.
+# playwright>=1.40
