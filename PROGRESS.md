@@ -144,6 +144,10 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
   Carrier screening already exists → correctly cut.
 
 ## Daily log (newest first)
+### 2026-06-07
+- **✅ Website chatbot built** — intent-router + 5 grounded handlers (personal_eligibility, bridge_status, stock_lookup, general_faq, fallback), multilingual EN/HI/TE, mock-first ($0) with Bedrock switchable, shared empathy/voice layer, curated cite-able FAQ (`services/knowledge.py`). Grounded only on Dataset.csv + scraped e-RaktKosh data; read-only; role-gated (no data leaks); no fabricated stats. All 5 chatbot smoke tests pass; `POST /chat` live and returning correct `intent`, `grounded_facts`, and `sources`. Also fixed: app boot wiring (real supply router registered). — _Claude_
+- **Next:** Part B — harden autonomous outreach loop (real-reply endpoint, follow-ups, fatigue cadence, closed learning loop, register agent router). See `docs/superpowers/specs/2026-06-07-chatbot-and-outreach-design.md`. — _Claude_
+
 ### 2026-06-06 (continued)
 - **✅ COMPLETED: Backend Route Refactoring to Production Grade** — Reorganized all 5 router domains from mixed-concern structure to **RBAC-ready architecture**. Split public portals (patients/, donors/) from admin management (/admin/*). Fixed path ambiguities (POST /donors/rank/emergency → /donors/rank-emergency). Expanded admin.py with full CRUD for donors/patients/bridges. Added pagination, type-safe schemas (Pydantic), comprehensive error handling. Created API_ROUTES.md (500-line reference), REFACTORING_CHANGELOG.md, VERIFICATION_REPORT.md. All 44 routes verified, no syntax errors, FastAPI app initializes cleanly. **Status: Ready for auth middleware + integration tests.** — _Claude_
 

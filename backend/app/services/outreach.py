@@ -19,11 +19,32 @@ from typing import Optional
 
 from ..utils.compat import normalize_blood_group
 from ..utils.eligibility import days_until_eligible
+from .voice import system_prompt
 
 LLM_BACKEND = os.environ.get("THALNET_LLM_BACKEND", "mock")
 
 # ── Reply labels ──────────────────────────────────────────────────────────
 REPLY_LABELS = ["accept", "decline", "maybe", "later", "question"]
+
+# ── Chatbot intent keywords (EN + HI + TE markers) ───────────────────────
+CHAT_INTENT_KEYWORDS = {
+    "personal_eligibility": [
+        "eligible", "donate again", "when can i", "how often can i donate",
+        "kab donate", "kitne din", "kab kar", "eppudu", "rojulu", "donate cheya",
+    ],
+    "bridge_status": [
+        "my bridge", "bridge status", "how is my bridge", "my squad", "my donors",
+        "my patients", "bridge doing", "bridge looking",
+    ],
+    "stock_lookup": [
+        "available", "stock", "units", "blood bank", "near me", "in stock",
+        "is o+", "is a+", "is b+", "is ab+", "any blood",
+    ],
+    "general_faq": [
+        "what is", "thalassemia", "thalassaemia", "how often", "transfusion",
+        "who can donate", "blood bridge", "how many donors", "90 days",
+    ],
+}
 
 
 # ── LLM Adapters ─────────────────────────────────────────────────────────
@@ -110,6 +131,80 @@ class MockLLM:
             return "te"
         return "en"
 
+    def classify_intent(self, text: str) -> dict:
+        t = text.strip().lower()
+        if not t:
+            return {"intent": "fallback", "confidence": 1.0}
+        best_intent = "fallback"
+        best_score = 0
+        for intent, kws in CHAT_INTENT_KEYWORDS.items():
+            score = sum(len(kw) for kw in kws if kw in t)
+            if score > best_score:
+                best_score = score
+                best_intent = intent
+        confidence = 0.9 if best_score else 0.4
+        return {"intent": best_intent, "confidence": confidence}
+
+    def compose_chat_reply(self, facts: dict, tone_context: dict, lang: str) -> str:
+        greeting = {"en": "Hi there", "hi": "Namaste", "te": "Namaskaram"}.get(lang, "Hi there")
+
+        if facts.get("note") == "no_record":
+            return (f"{greeting}! I couldn't find a record for that, so I can't share "
+                    "those details. If you've registered, double-check your ID and I'll "
+                    "be glad to help.")
+        if facts.get("note") == "wrong_role":
+            return (f"{greeting}! That information is part of a different view, so I'm "
+                    "not able to show it here — but I'm happy to help with what's "
+                    "available to you.")
+        if facts.get("note") == "need_location":
+            return (f"{greeting}! Tell me your district or city and I'll check which "
+                    "nearby blood banks have stock for you.")
+
+        # Eligibility facts
+        if "days_until" in facts:
+            if facts.get("eligible"):
+                body = ("Good news — you're eligible to donate right now. A patient "
+                        "nearby would be grateful whenever you're ready.")
+            else:
+                body = (f"You'll be eligible to donate again in {facts['days_until']} days. "
+                        "No rush — we'll be here when the time comes.")
+            if facts.get("total_donations"):
+                body += f" Thank you for your {facts['total_donations']} donations so far."
+            return f"{greeting}! {body}"
+
+        # Bridge facts
+        if "bridges" in facts:
+            bs = facts["bridges"]
+            if not bs:
+                return (f"{greeting}! You don't have an active bridge on record yet. "
+                        "When one is set up, I can tell you how it's doing.")
+            b = bs[0]
+            return (f"{greeting}! Your bridge currently looks '{b.get('integrity', 'Unknown')}' with "
+                    f"{b.get('donors', 0)} donors lined up. We'll gently step in if that changes.")
+
+        # Stock facts
+        if "banks" in facts:
+            banks = facts["banks"]
+            if not banks:
+                return (f"{greeting}! I couldn't find available {facts.get('blood_group','')} "
+                        f"stock near {facts.get('district','that area')} right now. "
+                        "I can check a wider area if you'd like.")
+            top = banks[0]
+            return (f"{greeting}! {top.get('name', 'A nearby bank')} in "
+                    f"{top.get('district', 'your area')} currently shows "
+                    f"{top.get('available_units', 0)} units of "
+                    f"{top.get('blood_group', facts.get('blood_group', ''))}. "
+                    f"I found {len(banks)} bank(s) with stock nearby.")
+
+        # FAQ facts
+        if "answer" in facts:
+            return f"{greeting}! {facts['answer']}"
+
+        # Fallback
+        return (f"{greeting}! I can help with your donation eligibility, your bridge, "
+                "blood availability near you, or questions about thalassemia donation. "
+                "What would you like to know?")
+
 
 class BedrockLLM:
     """Real Bedrock Claude Haiku adapter. Requires AWS credentials."""
@@ -195,6 +290,40 @@ class BedrockLLM:
         system = "Detect the language. Reply with only the ISO 639-1 code (en, hi, te, etc)."
         code = self._call(system, text, max_tokens=5).strip().lower()[:2]
         return code if code in ("en", "hi", "te", "kn", "ta", "mr") else "en"
+
+    def classify_intent(self, text: str) -> dict:
+        system = (
+            "Classify the user's message into exactly one intent label: "
+            "personal_eligibility, bridge_status, stock_lookup, general_faq, fallback. "
+            "personal_eligibility = when they can donate again; bridge_status = their "
+            "own bridge/donor squad; stock_lookup = blood availability at banks; "
+            "general_faq = general questions about thalassemia or donating; fallback = "
+            "anything else. Reply with JSON only: {\"intent\": \"...\", \"confidence\": 0.0-1.0}. "
+            "Handle English, Hindi, and Telugu."
+        )
+        import json
+        raw = self._call(system, text, max_tokens=40)
+        try:
+            data = json.loads(raw)
+            intent = str(data.get("intent", "")).lower()
+            if intent in CHAT_INTENT_KEYWORDS or intent == "fallback":
+                data["intent"] = intent
+                data.setdefault("confidence", 0.5)
+                return data
+        except json.JSONDecodeError:
+            pass
+        return {"intent": "fallback", "confidence": 0.3}
+
+    def compose_chat_reply(self, facts: dict, tone_context: dict, lang: str) -> str:
+        import json
+        system = system_prompt(lang)
+        user_msg = (
+            "Write a reply using ONLY these facts (JSON). If a needed fact is missing, "
+            "say you don't have it. Do not invent numbers.\n"
+            f"Role of the person: {tone_context.get('role', 'unknown')}\n"
+            f"Facts: {json.dumps(facts, default=str)}"
+        )
+        return self._call(system, user_msg, max_tokens=220)
 
 
 def get_llm():

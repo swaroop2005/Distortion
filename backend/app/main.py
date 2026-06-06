@@ -48,12 +48,7 @@ NOTES:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-<<<<<<< HEAD
-from .routers import admin, donors, patients, supply
-
-app = FastAPI(title="ThalNet API", version="0.2.0")
-=======
-from .routers import admin, agent, donors, patients, supply_routes
+from .routers import admin, chat, donors, patients, supply_routes
 
 app = FastAPI(
     title="ThalNet API",
@@ -63,7 +58,6 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_url="/openapi.json",
 )
->>>>>>> origin/main
 
 # ===== MIDDLEWARE =====
 app.add_middleware(
@@ -77,17 +71,12 @@ app.add_middleware(
 # ===== ROUTERS (organized by access level) =====
 # Admin: CRUD + management
 app.include_router(admin.router)
-app.include_router(supply.router)
+app.include_router(supply_routes.router)
 
 # Public portals
 app.include_router(donors.router)
 app.include_router(patients.router)
-
-# Autonomous orchestration
-app.include_router(agent.router)
-
-# Supply optimization (L1)
-app.include_router(supply_routes.router)
+app.include_router(chat.router)
 
 
 # ===== HEALTH & STATUS =====
