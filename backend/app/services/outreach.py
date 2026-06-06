@@ -314,10 +314,11 @@ class BedrockLLM:
     def classify_intent(self, text: str) -> dict:
         system = (
             "Classify the user's message into exactly one intent label: "
-            "personal_eligibility, bridge_status, stock_lookup, general_faq, fallback. "
+            "personal_eligibility, bridge_status, stock_lookup, general_faq, wellness, fallback. "
             "personal_eligibility = when they can donate again; bridge_status = their "
             "own bridge/donor squad; stock_lookup = blood availability at banks; "
-            "general_faq = general questions about thalassemia or donating; fallback = "
+            "general_faq = general questions about thalassemia or donating; "
+            "wellness = diet, hydration, lifestyle, or emotional-wellbeing tips; fallback = "
             "anything else. Reply with JSON only: {\"intent\": \"...\", \"confidence\": 0.0-1.0}. "
             "Handle English, Hindi, and Telugu."
         )

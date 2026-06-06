@@ -50,6 +50,15 @@ def test_compose_wellness_reply_has_disclaimer_and_caution():
     assert "hydrated" in reply
 
 
+def test_compose_wellness_reply_no_caution_still_has_disclaimer():
+    from backend.app.services.outreach import WELLNESS_DISCLAIMER
+    m = MockLLM()
+    reply = m.compose_chat_reply({"suggestions": ["Stay hydrated."]}, {"role": "donor"}, "en")
+    assert WELLNESS_DISCLAIMER in reply          # disclaimer fires even with no caution
+    assert "important note" not in reply.lower()  # no caution => no caution preamble
+    assert "hydrated" in reply
+
+
 if __name__ == "__main__":
     test_classify_intent_labels()
     test_classify_intent_hindi_telugu()
@@ -57,4 +66,5 @@ if __name__ == "__main__":
     test_compose_chat_reply_missing_facts_is_honest()
     test_classify_intent_wellness()
     test_compose_wellness_reply_has_disclaimer_and_caution()
+    test_compose_wellness_reply_no_caution_still_has_disclaimer()
     print("test_outreach_chat OK")
