@@ -27,6 +27,32 @@ entire brief) with **two deep AI spikes** where judges reward depth most:
 Everything else (patient request flow, donor chat, admin dashboard, consent, memory) is
 real but intentionally thin, so the demo *feels* like a complete product end-to-end.
 
+### What Blood Warriors already has → our differentiator
+The live site already has: emergency request listings, blood-stock search, donor
+leaderboard, registration, a dashboard, an **AI voice-enabled Blood Bridge chatbot**
+(scheduling + reminders), and a **carrier-screening dashboard** with real aggregate data.
+So "a chatbot" or "show community data" is **not** new. Our edge is the thing they do
+**not** have: an **autonomous multi-agent coordination backbone** that ranks → reaches out
+→ interprets replies → follows up → escalates → **learns from failure**, with no human in
+the loop until escalation. We win on the *operations* problem (donors going cold,
+coordinators manually chasing 100+ donors per emergency), not on UI.
+
+### Modeled as 3 agents (one unified AI layer, Step Functions orchestrated)
+- **Triage Agent** — ingests a request, builds a ranked donor shortlist (ML + matching).
+- **Outreach Agent** — conversational, multilingual contact; interprets free-text replies
+  ("travelling this week" → reschedule; "in Chennai" → deprioritize; "yes" → confirm).
+- **Escalation + Learning Agent** — watches response rates; if a batch goes cold, broadens
+  the pool / alternate channel / flags a coordinator; logs what worked → updates matching
+  weights. **This self-learning is the bullet most teams skip = our differentiator.**
+
+### Medical honesty (non-negotiable)
+Thalassemia is a **lifelong** management condition (500–700 transfusions/lifetime); it is
+**not** "beaten" by donation count. **No cure progress bars, no gamifying a child's illness.**
+Patient-facing view = honest operational transparency only ("3 donors contacted, 1
+confirmed; next transfusion due in 4 days"). Phenotype/HLA compatibility (Kell/Duffy/Kidd)
+is medically real but needs hospital EMR data that has **no open API in India** — so it is a
+**scale-path talking point**, not something we build. We match on ABO+Rh + geo + ML.
+
 ### Design principle
 > Build the **full platform thin**, then make the **AI core deep**. Serverless-first so
 > idle cost ≈ $0. I (Claude) generate the React UI and most infra; the team owns Python,
@@ -36,7 +62,7 @@ real but intentionally thin, so the demo *feels* like a complete product end-to-
 
 | Role | What they do in ThalNet |
 |------|--------------------------|
-| **Patient / Bridge** | Raises a recurring or emergency blood request. |
+| **Patient / Bridge** | Raises a request; sees honest ops status only (donors contacted/confirmed, next transfusion due). No cure framing. |
 | **Donor** | Receives outreach, chats with the multilingual assistant, accepts/declines, checks eligibility. |
 | **Admin (Blood Warriors staff)** | Watches live requests, donor-pool health, predictions, and escalations on a dashboard. |
 | **The Agent (autonomous)** | Ranks → contacts → interprets → follows up → escalates → logs outcomes, with no human in the loop until escalation. |
@@ -60,14 +86,14 @@ real but intentionally thin, so the demo *feels* like a complete product end-to-
                           └──────┬───────┘
                                  │
    New request triggers ─────────▼───────────────────────────────────────
-   ┌───────────────────── AWS Step Functions: Outreach Loop ─────────────┐
-   │ 1 RankDonors (Lambda → ML model + matching rules)                    │
-   │ 2 ContactDonor (Bedrock writes msg → SES email + in-app inbox)       │
-   │ 3 Wait (EventBridge timer)                                           │
-   │ 4 InterpretReply (Bedrock classifies: accept / decline / unclear)    │
-   │ 5 Choice → accepted? confirm & stop : next donor / escalate          │
-   │ 6 EscalateToAdmin (SNS)                                              │
-   │ 7 LogOutcome → DynamoDB  ──────────▶ feeds Self-Learning loop        │
+   ┌────────── AWS Step Functions: 3-Agent Coordination Loop ────────────┐
+   │ [TRIAGE]  1 RankDonors (Lambda → ML model + matching rules)          │
+   │ [OUTREACH]2 ContactDonor (Bedrock writes msg → SES email + inbox)    │
+   │           3 Wait (EventBridge timer)                                 │
+   │           4 InterpretReply (Bedrock: accept/decline/maybe/question)  │
+   │           5 Choice → accepted? confirm & stop : next donor           │
+   │ [ESCALATE 6 batch cold? broaden pool / alt channel / SNS to admin    │
+   │  +LEARN]  7 LogOutcome → DynamoDB ──▶ update match weights + prompts │
    └─────────────────────────────────────────────────────────────────────┘
 
    ML: sklearn models trained in a SageMaker notebook on Dataset.csv,
@@ -168,9 +194,11 @@ autonomous outreach loop (rank→contact→interpret→follow-up→escalate) · 
 basic learning · admin dashboard · consent gate · deployed on AWS.
 
 **Stretch (only if time):** real WhatsApp/SMS via a provider · live model retrain button ·
-Cognito auth · Athena analytics tab · richer multilingual set.
+Cognito auth · Athena analytics tab · richer multilingual set · honest patient status view.
 
-**Out:** payments, full user management, mobile apps, anything not in the brief.
+**Out / scale-path-only:** phenotype/HLA compatibility (no hospital EMR API in India) ·
+cure progress bars / gamification (medically wrong) · payments · full user management ·
+mobile apps · anything not in the brief.
 
 ## 12. Mapping to evaluation criteria (5 × 20%)
 

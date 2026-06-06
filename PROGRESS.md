@@ -58,11 +58,20 @@ something so we both always know the state of play. Newest entries at the top of
   (no paid Twilio/WhatsApp for the demo).
 - **2026-06-06** — Skipping Glue/Kinesis/Redshift/Athena/EKS/Fargate (overkill for 7k rows);
   keep as "scale path" talking point.
+- **2026-06-06** — Differentiator sharpened: BW already has voice chatbot + carrier dashboard,
+  so we win on the **autonomous 3-agent coordination + self-learning** (Triage / Outreach /
+  Escalation+Learning), not on "a chatbot."
+- **2026-06-06** — Medical honesty rule: thalassemia is lifelong → **no cure progress bars /
+  gamification**. Patient view = honest ops status only.
+- **2026-06-06** — Phenotype/HLA compatibility = **scale-path only** (no hospital EMR API in
+  India). We match on ABO+Rh + geo + ML.
 
 ## Daily log (newest first)
 ### 2026-06-06
 - Brainstormed direction with Claude; chose ThalNet full-platform approach.
 - Design doc + this tracker created. Pending team approval to start building.
+- Refined idea after competitive/medical review: adopted 3-agent framing, dropped
+  cure-framing, moved phenotype compat to scale-path. Design doc updated.
 
 ---
 
