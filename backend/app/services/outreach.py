@@ -19,6 +19,7 @@ from typing import Optional
 
 from ..utils.compat import normalize_blood_group
 from ..utils.eligibility import days_until_eligible
+from .voice import system_prompt
 
 LLM_BACKEND = os.environ.get("THALNET_LLM_BACKEND", "mock")
 
@@ -145,7 +146,6 @@ class MockLLM:
         return {"intent": best_intent, "confidence": confidence}
 
     def compose_chat_reply(self, facts: dict, tone_context: dict, lang: str) -> str:
-        from .voice import LANG_NAMES
         greeting = {"en": "Hi there", "hi": "Namaste", "te": "Namaskaram"}.get(lang, "Hi there")
 
         if facts.get("note") == "no_record":
@@ -179,8 +179,8 @@ class MockLLM:
                 return (f"{greeting}! You don't have an active bridge on record yet. "
                         "When one is set up, I can tell you how it's doing.")
             b = bs[0]
-            return (f"{greeting}! Your bridge currently looks '{b['integrity']}' with "
-                    f"{b['donors']} donors lined up. We'll gently step in if that changes.")
+            return (f"{greeting}! Your bridge currently looks '{b.get('integrity', 'Unknown')}' with "
+                    f"{b.get('donors', 0)} donors lined up. We'll gently step in if that changes.")
 
         # Stock facts
         if "banks" in facts:
@@ -190,8 +190,10 @@ class MockLLM:
                         f"stock near {facts.get('district','that area')} right now. "
                         "I can check a wider area if you'd like.")
             top = banks[0]
-            return (f"{greeting}! {top['name']} in {top['district']} currently shows "
-                    f"{top['available_units']} units of {top['blood_group']}. "
+            return (f"{greeting}! {top.get('name', 'A nearby bank')} in "
+                    f"{top.get('district', 'your area')} currently shows "
+                    f"{top.get('available_units', 0)} units of "
+                    f"{top.get('blood_group', facts.get('blood_group', ''))}. "
                     f"I found {len(banks)} bank(s) with stock nearby.")
 
         # FAQ facts
@@ -303,14 +305,16 @@ class BedrockLLM:
         raw = self._call(system, text, max_tokens=40)
         try:
             data = json.loads(raw)
-            if data.get("intent") in CHAT_INTENT_KEYWORDS or data.get("intent") == "fallback":
+            intent = str(data.get("intent", "")).lower()
+            if intent in CHAT_INTENT_KEYWORDS or intent == "fallback":
+                data["intent"] = intent
+                data.setdefault("confidence", 0.5)
                 return data
         except json.JSONDecodeError:
             pass
         return {"intent": "fallback", "confidence": 0.3}
 
     def compose_chat_reply(self, facts: dict, tone_context: dict, lang: str) -> str:
-        from .voice import system_prompt
         import json
         system = system_prompt(lang)
         user_msg = (
