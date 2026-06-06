@@ -30,6 +30,8 @@ backend/app/orchestrator.py 3-agent loop: triage→outreach→escalate→learn
 backend/app/services/chatbot.py   intent-router chatbot (5 grounded handlers, EN/HI/TE, read-only)
 backend/app/services/voice.py     shared empathy layer (tone guide + exemplars)
 backend/app/services/knowledge.py curated cite-able FAQ
+backend/app/services/wellness.py  role-filtered cited wellness suggestions (diet/hydration/emotional)
+data/wellness_suggestions.csv     curated wellness bank (audience + caution_flag + source)
 backend/app/routers/        patients,donors,admin,agent,supply_routes (32 endpoints)
 models/*.pkl                churn(0.968ROC) + responsiveness(0.865proxy)
 data/clean.csv              7033rows, Hyderabad, 132 geo pts
