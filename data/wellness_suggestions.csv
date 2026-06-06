@@ -1,0 +1,15 @@
+id,topic,audience,suggestion,caution_flag,source,lang
+patient_diet_iron,diet,patient,"Because regular transfusions can cause iron to build up in the body, many patients are advised to avoid iron supplements and limit very high-iron foods — your hematologist guides what is right for you.",iron_overload,Thalassemia International Federation,en
+patient_diet_tea,diet,patient,"Some patients find that tea or coffee with meals can lower how much iron the body absorbs; ask your doctor whether that suits your plan.",none,Cooley's Anemia Foundation,en
+patient_diet_calcium,diet,patient,"Calcium and vitamin D — from foods like dairy or fortified options, plus safe sunlight — support bone health, which thalassemia can affect over time.",none,Thalassemia International Federation,en
+donor_diet_recovery,diet,donor,"After donating, iron-rich foods like leafy greens, beans, and dates, along with good hydration, help your body rebuild.",none,NHS Give Blood,en
+donor_diet_vitc,diet,donor,"Pairing iron-rich foods with vitamin C, such as citrus or tomatoes, can help your body absorb iron as you recover from a donation.",none,NHS Give Blood,en
+any_diet_balanced,diet,any,"A balanced plate with vegetables, whole grains, and some protein is a friendly everyday default for most people.",none,NHS,en
+any_hydration,hydration,any,"Staying well-hydrated supports your energy through the day; water is usually the simplest choice.",none,NHS,en
+donor_hydration,hydration,donor,"Drinking extra water before and after donating helps you feel steadier and supports recovery.",none,NHS Give Blood,en
+patient_hydration,hydration,patient,"Gentle, steady hydration can help you feel better around treatment days; your care team can advise if you have any fluid limits.",none,Cooley's Anemia Foundation,en
+any_rest,hydration,any,"Regular sleep and a gentle daily routine help your body cope; small consistent habits beat big sudden changes.",none,NHS,en
+patient_emotional,emotional,patient,"Living with a lifelong condition is heavy sometimes — leaning on family, peer support groups, or a counsellor is a real strength, not a weakness.",none,Cooley's Anemia Foundation,en
+patient_emotional_peer,emotional,patient,"Connecting with others who manage thalassemia can ease the feeling of going through it alone.",none,Thalassemia International Federation,en
+donor_emotional,emotional,donor,"Thank you for showing up for patients — your steady support genuinely helps keep someone's treatment on track.",none,Blood Warriors,en
+any_emotional,emotional,any,"If stress or low mood lingers, talking to someone you trust or a professional can really help — reaching out is okay.",none,Cooley's Anemia Foundation,en
