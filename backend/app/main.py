@@ -7,15 +7,20 @@ donors, chat, dashboard) get added as the 3-agent loop comes online.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .routers import admin, donors, patients
+
 app = FastAPI(title="ThalNet API", version="0.1.0")
 
-# Frontend (Vite dev + Amplify) will call this cross-origin.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten before submit
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(patients.router)
+app.include_router(donors.router)
+app.include_router(admin.router)
 
 
 @app.get("/")

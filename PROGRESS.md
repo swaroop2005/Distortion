@@ -62,9 +62,13 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
 - [ ] Demo dry-run + submit
 
 ### 🏗️ In progress
-- [ ] #4 Shared backend modules — `geo.py` (reuse optimizer haversine) + `compat.py` (ABO+Rh) + `eligibility.py` (90-day) — _Claude (next: finish compat+eligibility)_
+- [ ] #8 bridge.py predictive bridge-break alarm + no-show buffer — _Claude (alarm logic done, no-show buffer next)_
 
 ### ✅ Done (this session, cont.)
+- [x] 2026-06-06 — #5 FastAPI routers — `patients.py` (list/detail/build-bridge/heal), `donors.py` (list/detail/clock/emergency-rank/register), `admin.py` (dashboard/churn-alerts/bridges). All 11 endpoints smoke-tested — _Claude_
+- [x] 2026-06-06 — #7 `backend/app/matching.py` — 4-factor ranking (blood compat + eligibility + ML + geo), emergency mode, human-readable reasons. Smoke-tested on real data — _Claude_
+- [x] 2026-06-06 — #8 `backend/app/bridge.py` — Auto-Bridge Builder (8→1), self-heal, integrity score (Full/At-risk/Broken), predictive bridge-break alarm, coverage calendar. Smoke-tested — _Claude_
+- [x] 2026-06-06 — #4 Shared backend modules — `geo.py` (haversine) + `compat.py` (ABO+Rh normalize + compatibility matrix, handles 16 messy blood group strings) + `eligibility.py` (90-day window). All smoke-tested — _Claude_
 - [x] 2026-06-06 — #3 `backend/app/store.py` — loads `clean.csv`, splits 84 patients / 4446 donors, attaches churn_risk + responsiveness from pkls, synth consent. Smoke-tested — _Claude_
 
 ### ✅ Done
@@ -136,6 +140,10 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
 
 ## Daily log (newest first)
 ### 2026-06-06
+- **Built FastAPI routers** — 3 router files (patients/donors/admin), 11 endpoints total. All pass integration test via TestClient. Includes: bridge build+heal, donation clock, emergency ranking, donor registration (dynamic pool growth), admin dashboard aggregation, churn alerts with fatigue-aware cadence actions (contact-now/wait/appreciate/DND).
+- **Built matching.py** — 4-factor donor ranking engine (blood compat hard filter + 90-day eligibility hard filter + ML scores + geo proximity). Emergency mode for ad-hoc requests. Human-readable reasons per donor.
+- **Built bridge.py** — Auto-Bridge Builder flagship. 8→1 bridge formation with coverage calendar, integrity scoring (Full/At-risk/Broken), self-heal (auto-replace churned donors), predictive bridge-break alarm (flags when ≥2 donors show high churn), no-show risk detection.
+- **Built shared modules** — geo.py (haversine), compat.py (ABO+Rh compatibility matrix, normalizes 16 messy blood group strings including A1/A2/A1B/A2B/Bombay), eligibility.py (90-day donation window). All smoke-tested against real clean.csv data.
 - **Built #4 ML notebook** (`notebooks/train_models.py`). First pass scored ROC-AUC 1.000 on
   BOTH models → stopped, treated as leakage red flag (not a win). Diagnosed: churn recency cols
   *define* the Inactive label (circular), and `target_willing`=ever-donated is tautological with
