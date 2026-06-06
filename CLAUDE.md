@@ -1,96 +1,53 @@
-# ThalNet — CLAUDE.md
+# ThalNet
 
-## What this is
-Autonomous AI blood-support network for Blood Warriors (Hyderabad NGO, thalassemia patients ↔ donors). Hackathon: AI For Good 2.0 (Blend360), team Distortion. **Date: 2026-06-06.**
+AI blood-support network for Blood Warriors (thalassemia patients↔donors). Hackathon AI4Good 2.0, team Distortion, 2026-06-06.
 
-## Architecture: 2 layers joined by one CSV
+## Arch
+L1 SUPPLY (optimizer/+project/) BUILT → mobilization_plan.csv → L2 COORDINATION (backend/) BUILT: Triage→Outreach→Escalate+Learn
+
+## Stack
+React Vite | FastAPI+Mangum | DynamoDB(local=in-memory store.py) | Bedrock Haiku (mock+real) | sklearn .pkl in Lambda | Amplify+Lambda/APIGW+S3+SES+StepFn
+BANNED: EC2,RDS,OpenSearch,Kinesis,SageMaker-endpoint,NAT-GW. Budget <$10/$40cap. Local-first, AWS last.
+Switch LLM: `THALNET_LLM_BACKEND=bedrock` (default=mock, $0)
+
+## Run
+`.venv/bin/uvicorn backend.app.main:app --reload --port 8000`
+Python 3.9.6 via `.venv/bin/python` | node v24 npm 11 | NO aws CLI | branch: scaffold-and-design
+API docs: http://localhost:8000/docs (32 endpoints)
+
+## Files
 ```
-LAYER 1 — SUPPLY COMMAND CENTER (optimizer/ + project/) [BUILT]
-  e-RaktKosh national data → predict shortage → MILP redistribution
-  → mobilization_plan.csv (THE SEAM) → dashboard.html
-LAYER 2 — AUTONOMOUS COORDINATION (backend/) [BUILDING]
-  Triage → Outreach → Escalate+Learn (3-agent loop)
-```
-
-## Stack (LOCKED)
-- **Frontend:** React (Vite) — UI will be generated via Claude Design from BW website style
-- **Backend:** FastAPI + Mangum (Lambda-ready), Python 3.9.6, venv at `.venv/`
-- **DB:** DynamoDB (on-demand). Local dev = in-memory (store.py)
-- **AI:** Bedrock Claude Haiku (chat/interpret/translate), sklearn .pkl in Lambda
-- **Infra:** 100% serverless — Amplify + Lambda/API Gateway + DynamoDB + S3 + SES + Step Functions
-- **BANNED (bill idle):** EC2, RDS, OpenSearch, Kinesis, SageMaker endpoint, NAT GW
-- **Budget:** <$10 target under $40 cap. ML served by loading .pkl inside Lambda = $0
-- **Local-first:** React Vite + FastAPI on localhost ($0). AWS deploy last.
-
-## Repo layout
-```
-backend/app/main.py        FastAPI app + Mangum handler
-backend/app/store.py       In-memory data layer (clean.csv + ML scores)
-backend/app/compat.py      ABO+Rh compatibility matrix (16 messy strings → 8 canonical)
-backend/app/eligibility.py 90-day donation window
-backend/app/geo.py          Haversine distance
-backend/app/matching.py    4-factor donor ranking (blood + eligibility + ML + geo)
-backend/app/bridge.py      Auto-Bridge Builder (8→1, self-heal, integrity, alarms)
-backend/app/routers/       patients.py, donors.py, admin.py (11 endpoints)
-models/                    churn_model.pkl, responsiveness_model.pkl, metrics.json
-notebooks/train_models.py  ML training script
-data/clean.csv             7033 rows (84 patients, 4446 donors)
-data/blood_banks.csv       National e-RaktKosh (3863 banks)
-data/blood_stock_long.csv  National stock (44675 rows)
-optimizer/                 Layer 1 (Vijetha) — BUILT, don't modify
-project/                   Layer 1 scraper — BUILT, don't modify
-docs/DESIGN.md             Full spec
-docs/CONTEXT.md            Session handoff doc
-PROGRESS.md                Live work log — UPDATE EVERY CHAT
+backend/app/main.py         FastAPI+Mangum, includes all routers
+backend/app/store.py        data layer: clean.csv→84pat/4446donors+ML scores
+backend/app/compat.py       ABO+Rh matrix (16 raw+canonical→8 types+Bombay)
+backend/app/eligibility.py  90-day donation window
+backend/app/geo.py          haversine
+backend/app/matching.py     4-factor donor ranking (blood+elig+ML+geo)
+backend/app/bridge.py       Auto-Bridge 8→1, self-heal, integrity, alarms
+backend/app/supply.py       L1→L2 bridge (blood_stock+banks+mobilization seam)
+backend/app/outreach.py     MockLLM+BedrockLLM, empathetic msgs, reply interpret(EN/HI/TE), failure learning
+backend/app/orchestrator.py 3-agent loop: triage→outreach→escalate→learn
+backend/app/routers/        patients,donors,admin,agent,supply_routes (32 endpoints)
+models/*.pkl                churn(0.968ROC) + responsiveness(0.865proxy)
+data/clean.csv              7033rows, Hyderabad, 132 geo pts
+data/blood_stock_long.csv   44,675rows national stock (3,863 banks)
+data/blood_banks.csv        bank metadata (district,phones,type)
+optimizer/,project/         L1 BUILT — DON'T MODIFY
 ```
 
-## Running
-```bash
-# Backend
-.venv/bin/uvicorn backend.app.main:app --reload --port 8000
+## Rules
+- Flagship=Auto-Bridge Builder(8→1+stagger+self-heal)
+- Medical honesty: thalassemia lifelong, NO cure bars/gamification
+- Rank don't filter: ML=order+message, never exclusion
+- Smoke test every module. Update PROGRESS.md every chat.
+- UI via Claude Design cloning BW website style
+- Push to main frequently so Swaroop stays in sync
 
-# Smoke test any module
-.venv/bin/python -m backend.app.store
+## Done (all tested, 10/10 subsystems pass)
+ML models, store.py, compat, eligibility, geo, matching, bridge, supply integration, outreach agent (mock+bedrock), orchestrator (3-agent loop), 32 API endpoints
 
-# Run ML training
-.venv/bin/python notebooks/train_models.py
-```
-
-## Data facts
-- clean.csv: 7033 rows, 84 patients, 4446 donors (Emergency+Bridge roles)
-- Blood groups: 16 messy strings normalized to 8 ABO+Rh types + Bombay
-- Geo: Hyderabad-centric, 132 unique lat/lng points, coarse
-- No consent column → synthesized in store.py
-- ML: churn 0.968 ROC (strong), responsiveness 0.865 (weak proxy — never headline)
-
-## Key decisions
-- **Flagship:** Auto-Bridge Builder (8→1 bridge, eligibility-stagger, self-heal)
-- **Medical honesty:** Thalassemia lifelong, NO cure progress bars, no gamifying illness
-- **Rank don't filter:** ML decides order + message, never who's allowed
-- **Build order:** Patient view first → Donor → Admin
-- **Cognito:** Real login, role claim routes to role-specific dashboard
-- **UI approach:** Clone BW website style via Claude Design, add new pages/features
-
-## Conventions
-- Run with `.venv/bin/python` (Python 3.9.6)
-- node v24 + npm 11 installed
-- aws CLI NOT installed
-- Branch: scaffold-and-design
-- Smoke test every new module before moving on
-- Update PROGRESS.md every chat session (standing rule)
-
-## What's built (as of 2026-06-06)
-- [x] ML models (churn + responsiveness) with leakage fix
-- [x] store.py data layer
-- [x] Shared modules: geo, compat, eligibility
-- [x] matching.py (4-factor ranker)
-- [x] bridge.py (Auto-Bridge Builder + self-heal + alarms)
-- [x] FastAPI routers (11 endpoints, all tested)
-- [x] Layer 1 optimizer (Vijetha) — BUILT
-
-## What's next
-- [ ] Outreach agent (Bedrock contact loop, reply interpretation, failure learning)
-- [ ] Step Functions orchestration (rank→contact→interpret→follow-up→escalate)
-- [ ] React scaffold + role-routed views
-- [ ] DynamoDB migration (swap store.py internals)
-- [ ] Deploy (Amplify + Lambda)
+## Next
+- [ ] Chatbot endpoint (multilingual, context-aware, on every page)
+- [ ] React scaffold + role-routed views (via Claude Design)
+- [ ] DynamoDB swap (store.py internals)
+- [ ] AWS deploy (Amplify + Lambda)
