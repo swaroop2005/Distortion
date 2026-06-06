@@ -48,8 +48,8 @@ optimizer/,project/         L1 BUILT — DON'T MODIFY
 - UI via Claude Design cloning BW website style
 - Push to main frequently so Swaroop stays in sync
 
-## Done (all tested, 10/10 subsystems pass)
-ML models, store.py, compat, eligibility, geo, matching, bridge, supply integration, outreach agent (mock+bedrock), orchestrator (3-agent loop), 32 API endpoints
+## Done (all tested, subsystems pass)
+ML models, store.py, compat, eligibility, geo, matching, bridge, supply integration, outreach agent (mock+bedrock), orchestrator (3-agent loop), API endpoints, **website chatbot (POST /chat: intent-router + 5 grounded read-only handlers, EN/HI/TE, mock-first)**, **wellness suggestions (role-filtered cited CSV bank, iron-overload guard, always-on non-medical-advice disclaimer)**
 
 ## Next
 - [x] Chatbot endpoint (multilingual, context-aware) — POST /chat, intent-router + grounded handlers
