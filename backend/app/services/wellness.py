@@ -43,13 +43,15 @@ def suggest(audience: str, topic: Optional[str] = None, limit: int = 3) -> list[
         rows = [r for r in rows if r["topic"] == topic]
     # caution rows first, then original file order (sorted is stable)
     rows = sorted(rows, key=lambda r: 0 if r.get("caution_flag", "none") != "none" else 1)
-    return rows[:limit]
+    # return shallow copies so callers can never mutate the cached rows
+    return [dict(r) for r in rows[:limit]]
 
 
 def detect_topic(message: str) -> Optional[str]:
     """Light keyword match → diet | hydration | emotional, or None for no specific topic."""
     t = message.lower()
     best, best_score = None, 0
+    # on a tie, the first-defined topic wins (dict insertion order)
     for topic, kws in TOPIC_KEYWORDS.items():
         score = sum(1 for kw in kws if kw in t)
         if score > best_score:
