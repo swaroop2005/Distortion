@@ -19,6 +19,7 @@ from .bridge import patient_bridges
 from ..utils.eligibility import days_until_eligible, is_eligible
 from ..utils.compat import normalize_blood_group
 from . import knowledge
+from . import wellness
 from . import supply_store_shim as _stock
 from .outreach import get_llm
 
@@ -98,11 +99,31 @@ def _fallback(role: str, user_id: Optional[str], message: str) -> tuple[dict, li
     return {"note": "fallback"}, []
 
 
+# role → which audience's wellness rows they may see (public/admin: general only)
+_AUDIENCE = {"donor": "donor", "patient": "patient", "admin": "any", "public": "any"}
+
+
+def _wellness(role: str, user_id: Optional[str], message: str) -> tuple[dict, list]:
+    audience = _AUDIENCE.get(role, "any")
+    topic = wellness.detect_topic(message)
+    rows = wellness.suggest(audience, topic, limit=3)
+    if not rows:
+        return {"note": "fallback"}, []
+    caution = next((r["suggestion"] for r in rows if r["caution_flag"] != "none"), None)
+    facts = {
+        "suggestions": [r["suggestion"] for r in rows],
+        "caution": caution,
+    }
+    sources = sorted({r["source"] for r in rows})
+    return facts, sources
+
+
 HANDLERS = {
     "personal_eligibility": _personal_eligibility,
     "bridge_status": _bridge_status,
     "stock_lookup": _stock_lookup,
     "general_faq": _general_faq,
+    "wellness": _wellness,
     "fallback": _fallback,
 }
 
