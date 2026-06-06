@@ -1,0 +1,10 @@
+# The engine runs on the Python standard library alone (csv, math, datetime).
+# Install the optional extras below to enable the exact MILP optimizer and any
+# downstream analysis.
+
+# Exact integer transshipment optimizer (bundled CBC solver). Without it, the
+# engine automatically falls back to a deterministic greedy optimizer.
+pulp>=2.7
+
+# Optional, for ad-hoc analysis of the output CSVs.
+pandas>=2.0
