@@ -71,14 +71,21 @@ python -m optimizer.dashboard                     # -> data/optimizer/dashboard.
 
 ### Dashboard
 
-`python -m optimizer.dashboard` runs the pipeline across three demand scenarios
-(baseline / 10× / 30×) and writes a **single self-contained `dashboard.html`** with
-all data embedded — no server, no build step, no CORS. Open it in any browser, or
-drop it on **S3 / Amplify** for Blood Warriors to host. It shows KPI cards, a
-days-of-supply chart per blood group, an interactive Telangana district map
-(shortfall heat + transfer flows + donor density), the redistribution table, and
-the donor-mobilization plan, with a **scenario selector** to explore baseline vs.
-surge. Uses Chart.js + Leaflet via CDN (internet needed to render).
+`python -m optimizer.dashboard` writes a **single self-contained `dashboard.html`**
+with all data embedded — no server, no build step, no CORS. Open it in any browser
+or host it on **S3 / Amplify**. Uses Chart.js + Leaflet via CDN (internet needed).
+
+It has a **scope toggle**:
+
+* **🇮🇳 India (national)** — supply + safety-stock rebalance across all scraped
+  states: KPI cards, national supply by blood group, a **state-level map** (markers
+  sized by units in stock + inter-state rebalance flows), the top rebalance
+  transfers, and the top states by stock. *Supply/rebalance only — national demand
+  data does not exist, so shortage analysis would be fabricated.*
+* **📍 Telangana (demand)** — the demand-driven command center: days-of-supply per
+  group, a district map (shortfall + bank→bank flows + donor density), the
+  bank-level transfer table, and the donor-mobilization plan, with a
+  **baseline / 10× / 30×** scenario selector.
 
 > The engine runs on the **Python standard library alone**. `pulp` is optional
 > (enables the exact optimizer; without it the greedy fallback is used). `pandas`

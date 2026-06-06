@@ -36,10 +36,10 @@ def _transfer(src: dict, dst: dict, group: str, units: int, mode: str) -> dict:
         "units": units,
         "distance_km": dist,
         "from_bank_id": src["id"], "from_bank": src["name"],
-        "from_district": src["district"], "from_type": src["type"],
+        "from_district": src["district"], "from_state": src["state"], "from_type": src["type"],
         "from_capacity": src["total_units"],
         "to_bank_id": dst["id"], "to_bank": dst["name"],
-        "to_district": dst["district"], "to_type": dst["type"],
+        "to_district": dst["district"], "to_state": dst["state"], "to_type": dst["type"],
         "to_capacity": dst["total_units"],
         "reason": f"{units}u {group}: {src['name']} → {dst['name']} ({dist} km)",
     }
