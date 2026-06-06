@@ -44,7 +44,15 @@ CHAT_INTENT_KEYWORDS = {
         "what is", "thalassemia", "thalassaemia", "how often", "transfusion",
         "who can donate", "blood bridge", "how many donors", "90 days",
     ],
+    "wellness": [
+        "what should i eat", "what to eat", "diet", "food", "stay healthy",
+        "feel better", "tips", "lifestyle", "take care", "advice", "healthy",
+        "kya khana", "khana", "aahar", "emcomito", "ela undali",
+    ],
 }
+
+WELLNESS_DISCLAIMER = ("These are general suggestions, not medical advice — "
+                       "please check with your hematologist before making changes.")
 
 
 # ── LLM Adapters ─────────────────────────────────────────────────────────
@@ -200,6 +208,18 @@ class MockLLM:
         if "answer" in facts:
             return f"{greeting}! {facts['answer']}"
 
+        # Wellness suggestions (always carries the non-medical-advice disclaimer)
+        if "suggestions" in facts:
+            parts = [f"{greeting}!"]
+            caution = facts.get("caution")
+            if caution:
+                parts.append("One important note: " + caution)
+            others = [s for s in facts["suggestions"] if s != caution]
+            if others:
+                parts.append("A few things that may help: " + " ".join(others))
+            parts.append(WELLNESS_DISCLAIMER)
+            return " ".join(parts)
+
         # Fallback
         return (f"{greeting}! I can help with your donation eligibility, your bridge, "
                 "blood availability near you, or questions about thalassemia donation. "
@@ -317,13 +337,20 @@ class BedrockLLM:
     def compose_chat_reply(self, facts: dict, tone_context: dict, lang: str) -> str:
         import json
         system = system_prompt(lang)
+        wellness_rule = ""
+        if "suggestions" in facts:
+            wellness_rule = (
+                " These are wellness suggestions: if a 'caution' field is present, lead "
+                "with it gently. Suggest, never prescribe (no doses, no 'you must'). "
+                f"End your reply with exactly this sentence: {WELLNESS_DISCLAIMER}"
+            )
         user_msg = (
             "Write a reply using ONLY these facts (JSON). If a needed fact is missing, "
-            "say you don't have it. Do not invent numbers.\n"
+            "say you don't have it. Do not invent numbers." + wellness_rule + "\n"
             f"Role of the person: {tone_context.get('role', 'unknown')}\n"
             f"Facts: {json.dumps(facts, default=str)}"
         )
-        return self._call(system, user_msg, max_tokens=220)
+        return self._call(system, user_msg, max_tokens=240)
 
 
 def get_llm():
