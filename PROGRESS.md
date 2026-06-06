@@ -65,6 +65,7 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
 - [ ] React scaffold + role-routed views (patient/donor/admin) — via Claude Design
 
 ### ✅ Done (this session, cont.)
+- [x] 2026-06-06 — **Backend Route Refactoring (Production Grade)** — Reorganized 5 router domains (admin, donors, patients, agent, supply) into RBAC-ready architecture. Fixed path ambiguities, expanded admin.py with full CRUD (donors/patients/bridges), split public portals from management. Created API_ROUTES.md (500-line reference) + REFACTORING_CHANGELOG.md + VERIFICATION_REPORT.md. All 44 routes verified, FastAPI app initializes cleanly. Ready for auth middleware — _Claude_
 - [x] 2026-06-06 — **Autonomous orchestrator** `backend/app/orchestrator.py` — 3-agent loop: triage→outreach→escalate→learn. Entry points: handle_transfusion_due (full cycle), handle_new_donor (auto-map to bridges), handle_emergency. Event log + request tracking — _Claude_
 - [x] 2026-06-06 — **Outreach agent** `backend/app/outreach.py` — MockLLM + BedrockLLM adapters. Empathetic impact messages, thank-you with stats, clock nudge, reply interpretation (EN/HI/TE), failure learning log — _Claude_
 - [x] 2026-06-06 — **Supply integration** `backend/app/supply.py` — reads optimizer blood_stock (44,675 rows) + blood_banks (3,863) + mobilization_plan. Patient map data: nearby compatible banks, regional supply, donor counts — _Claude_
@@ -143,6 +144,9 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
   Carrier screening already exists → correctly cut.
 
 ## Daily log (newest first)
+### 2026-06-06 (continued)
+- **✅ COMPLETED: Backend Route Refactoring to Production Grade** — Reorganized all 5 router domains from mixed-concern structure to **RBAC-ready architecture**. Split public portals (patients/, donors/) from admin management (/admin/*). Fixed path ambiguities (POST /donors/rank/emergency → /donors/rank-emergency). Expanded admin.py with full CRUD for donors/patients/bridges. Added pagination, type-safe schemas (Pydantic), comprehensive error handling. Created API_ROUTES.md (500-line reference), REFACTORING_CHANGELOG.md, VERIFICATION_REPORT.md. All 44 routes verified, no syntax errors, FastAPI app initializes cleanly. **Status: Ready for auth middleware + integration tests.** — _Claude_
+
 ### 2026-06-06
 - **Built autonomous 3-agent orchestrator** — full triage→outreach→escalate→learn cycle. Handles: transfusion due (auto-build bridge + contact donors), new donor registration (auto-find compatible patients + welcome), emergency (fast rank + outreach). Event log + failure learning feedback loop.
 - **Built outreach agent** — dual adapter (MockLLM for $0 dev, BedrockLLM for prod). Composes empathetic messages with donor impact stats, interprets free-text replies in EN/HI/TE, sends thank-you with leaderboard link + next eligibility, proactive clock nudge. Failure learning: tracks accept rate + decline reasons → feeds back into agent prompts.
