@@ -106,8 +106,10 @@ def list_requests(patient_id=None) -> list[dict]:
 def _distance_km(donor: dict, patient: Optional[dict]) -> Optional[float]:
     if not patient:
         return None
-    km = donor_patient_km(donor, patient)
-    if km is None or (isinstance(km, float) and math.isnan(km)):
+    # Ask geo for a NaN sentinel on missing coords so we can report "unknown"
+    # (None) rather than a misleading 999 km, and sort such donors truly last.
+    km = donor_patient_km(donor, patient, fallback=float("nan"))
+    if math.isnan(km):
         return None
     return round(km, 1)
 

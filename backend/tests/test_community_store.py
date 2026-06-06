@@ -72,6 +72,16 @@ def test_find_matches_unknown_request():
         pass
 
 
+def test_find_matches_eligible_sorted_by_distance():
+    cs._reset()
+    p = _a_patient()
+    req = cs.create_request(p["user_id"], p["blood_group"], "Hyderabad", 2, "2026-06-09")
+    matches = cs.find_matches(req["request_id"], limit=50)
+    eligible = [m for m in matches if m["eligible"]]
+    dists = [m["distance_km"] if m["distance_km"] is not None else 1e9 for m in eligible]
+    assert dists == sorted(dists), "eligible matches must be ordered nearest-first"
+
+
 if __name__ == "__main__":
     test_create_and_get_request()
     test_create_request_unknown_patient()
@@ -79,4 +89,5 @@ if __name__ == "__main__":
     test_find_matches_all_compatible()
     test_find_matches_eligible_first_then_nearest()
     test_find_matches_unknown_request()
+    test_find_matches_eligible_sorted_by_distance()
     print("test_community_store OK")
