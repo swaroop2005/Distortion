@@ -34,6 +34,12 @@ _NORMALIZE: dict[str, str] = {
     "a2b positive": "AB+",
     "a2b negative": "AB-",
     "bombay blood group": "Bombay",
+    # Already-canonical forms
+    "a+": "A+", "a-": "A-",
+    "b+": "B+", "b-": "B-",
+    "o+": "O+", "o-": "O-",
+    "ab+": "AB+", "ab-": "AB-",
+    "bombay": "Bombay",
 }
 
 # donor_group -> set of patient groups it can transfuse to

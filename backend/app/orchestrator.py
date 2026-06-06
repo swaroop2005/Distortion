@@ -129,19 +129,34 @@ def run_outreach_cycle(
         impact["total_donations"] = int(donor.get("donations_till_date", 0) or 0)
         message = llm.compose_outreach(donor, ctx, impact)
 
-        # Simulate: use responsiveness to determine likely reply
+        # Simulate realistic reply using ML scores + randomness
+        # In production: real donor replies interpreted by Bedrock
+        import random
         resp = float(donor.get("responsiveness", 0.5))
         churn = float(donor.get("churn_risk", 0.5))
+        accept_prob = resp * (1 - churn) * 0.8  # max ~64% even for best donors
+        roll = random.random()
 
-        if resp >= 0.7 and churn < 0.5:
-            simulated_reply = "Yes, I can donate"
+        if roll < accept_prob:
+            simulated_reply = random.choice([
+                "Yes, I can donate", "Sure, count me in",
+                "haan bilkul, batao kab aana hai", "Yes ready"])
             label = "accept"
-        elif churn >= 0.7:
-            simulated_reply = "Not available right now"
-            label = "decline"
-        elif resp >= 0.4:
-            simulated_reply = "Maybe, let me check my schedule"
+        elif roll < accept_prob + 0.15:
+            simulated_reply = random.choice([
+                "Maybe later this week", "Let me check my schedule",
+                "Not sure, can you call tomorrow?", "shayad, baad mein batata hoon"])
             label = "maybe"
+        elif roll < accept_prob + 0.30:
+            simulated_reply = random.choice([
+                "Sorry, travelling this week", "Not possible right now",
+                "nahi ho payega abhi", "I'm out of town"])
+            label = "decline"
+        elif roll < accept_prob + 0.40:
+            simulated_reply = random.choice([
+                "Busy right now, ask me next month",
+                "baad mein contact karo", "Not this time"])
+            label = "later"
         else:
             simulated_reply = ""
             label = "no_response"

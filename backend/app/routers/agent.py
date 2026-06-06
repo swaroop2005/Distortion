@@ -77,3 +77,34 @@ def outcomes(request_id: str = None):
 def learning():
     """Failure learning summary — what worked, what didn't."""
     return failure_summary()
+
+
+@router.get("/review/{request_id}")
+def review_request(request_id: str):
+    """Full review of an outreach cycle — see what worked and what didn't."""
+    req = get_request(request_id)
+    if not req:
+        raise HTTPException(404, "Request not found")
+    outcomes = get_outcomes(request_id)
+    by_label = {}
+    for o in outcomes:
+        lbl = o.get("label", "unknown")
+        by_label[lbl] = by_label.get(lbl, 0) + 1
+
+    total = len(outcomes)
+    accepted = by_label.get("accept", 0)
+    return {
+        "request_id": request_id,
+        "request": req,
+        "total_contacted": total,
+        "breakdown": by_label,
+        "accept_rate": round(accepted / total, 2) if total else 0,
+        "quality": (
+            "Excellent" if accepted / max(total, 1) >= 0.5
+            else "Good" if accepted / max(total, 1) >= 0.3
+            else "Needs improvement" if accepted > 0
+            else "Failed — escalation needed"
+        ),
+        "outcomes": outcomes,
+        "learning": failure_summary(),
+    }
