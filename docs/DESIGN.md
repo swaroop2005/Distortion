@@ -1,7 +1,8 @@
 # ThalNet — Autonomous Blood Bridge for Blood Warriors
 
 **Hackathon:** AI4Good 2.0 (Blend360) · **Team:** Distortion (2 people) · **Date:** 2026-06-06
-**Status:** 📝 Design — awaiting team approval before implementation.
+**Status:** 🟢 Approved — building. Validated against Problem Statement.pdf (required
+capabilities + authorized AWS + recommended stack) and the live Blood Warriors site.
 
 ---
 
@@ -18,32 +19,67 @@ manual effort.
 ## 2. What we are building
 
 **ThalNet** — one platform that covers the whole workflow (a "walking skeleton" of the
-entire brief) with **two deep AI spikes** where judges reward depth most:
+entire brief) with **three deep AI spikes** where judges reward depth most:
 
-1. **Smart Matching & Prediction engine** (real ML on the provided 7,033-row dataset).
-2. **Autonomous agentic outreach loop** (Bedrock + Step Functions) that contacts ranked
+1. **Auto-Bridge Builder (flagship)** — automates the "8→1" Blood Bridge: for each patient
+   it assembles and *maintains* a balanced squad of 8–10 donors that is blood-compatible,
+   geographically spread, and **eligibility-staggered so someone is always eligible** every
+   15–20 days. When a donor goes inactive or moves, the bridge **self-heals** by auto-recruiting
+   a replacement. This is the thing Blood Warriors does entirely by hand today.
+2. **Smart Matching & Prediction engine** (real ML on the provided 7,033-row dataset) — ranks
+   donors and powers bridge assembly, donor-fatigue cadence, and the resilience map.
+3. **Autonomous agentic outreach loop** (Bedrock + Step Functions) that contacts ranked
    donors, interprets their replies, follows up, escalates, and **learns from outcomes**.
 
 Everything else (patient request flow, donor chat, admin dashboard, consent, memory) is
 real but intentionally thin, so the demo *feels* like a complete product end-to-end.
 
+### Headline features folded in (all powered by the same backbone)
+- **Auto-Bridge Builder + Self-Healing Bridge** (spike 1) — autonomous 8→1 bridge formation,
+  eligibility-stagger optimization, and auto-repair when a donor churns. **Bridge Integrity
+  Score** (Full / At-risk / Broken + reason) surfaces health live.
+- **Personal Donation Clock** (donor view) — proactive: "You're eligible in 12 days; a patient
+  4 km away (O+) needs you on the 18th — reserve your slot?" Flips the chatbot from reactive
+  to anticipatory.
+- **Fatigue-Aware Cadence** — Model B (churn) doesn't just score risk, it picks the *action*:
+  **contact now / wait / send appreciation / do-not-disturb** — so outreach scales without
+  burning donors out.
+- **India Resilience Heatmap** (admin) — per region × blood group, a resilience score
+  (active donors vs demand) → "Hyderabad O+ 82/100, Nagpur 46/100." The supply-ops dashboard
+  BW does not have. Optional **shortage-forecast** tile (labeled an estimate — patient data is thin).
+- **Carrier Cascade** (prevention, stretch) — a positive carrier result auto-triggers
+  multilingual nudges to screen at-risk family. One test → a family screened. Serves the
+  "Thalassemia-Free India 2035" mission.
+
 ### What Blood Warriors already has → our differentiator
 The live site already has: emergency request listings, blood-stock search, donor
-leaderboard, registration, a dashboard, an **AI voice-enabled Blood Bridge chatbot**
-(scheduling + reminders), and a **carrier-screening dashboard** with real aggregate data.
-So "a chatbot" or "show community data" is **not** new. Our edge is the thing they do
+leaderboard, registration, a dashboard, a **WhatsApp-based AI Blood Bridge chatbot** (built
+with REAN Foundation — does scheduling + reminders + progress tracking), and **carrier
+screening** ("Know Your Risk"). So "a chatbot" or "show community data" is **not** new — and
+their chatbot is **scripted scheduling on WhatsApp**, not autonomous. Our edge is the thing they do
 **not** have: an **autonomous multi-agent coordination backbone** that ranks → reaches out
 → interprets replies → follows up → escalates → **learns from failure**, with no human in
 the loop until escalation. We win on the *operations* problem (donors going cold,
 coordinators manually chasing 100+ donors per emergency), not on UI.
 
 ### Modeled as 3 agents (one unified AI layer, Step Functions orchestrated)
-- **Triage Agent** — ingests a request, builds a ranked donor shortlist (ML + matching).
+- **Triage Agent** — ingests a request *or* a patient needing a bridge; **builds/repairs the
+  8→1 bridge** and produces a ranked donor shortlist (ML + matching + eligibility-stagger).
 - **Outreach Agent** — conversational, multilingual contact; interprets free-text replies
-  ("travelling this week" → reschedule; "in Chennai" → deprioritize; "yes" → confirm).
+  ("travelling this week" → reschedule; "in Chennai" → deprioritize; "yes" → confirm). Uses
+  **fatigue-aware cadence** to decide contact now / wait / appreciate / DND per donor.
 - **Escalation + Learning Agent** — watches response rates; if a batch goes cold, broadens
   the pool / alternate channel / flags a coordinator; logs what worked → updates matching
-  weights. **This self-learning is the bullet most teams skip = our differentiator.**
+  weights and the resilience map. **This self-learning is the bullet most teams skip = our differentiator.**
+
+### Core principle: rank, don't filter (+ growth mode)
+Prediction decides the **order and the message**, never *who is allowed in*. Two modes:
+- **Emergency mode** — most-likely-to-respond-fast contacted first (speed = life); the loop
+  falls through the whole list if needed, so nobody is permanently excluded.
+- **Growth / re-engagement mode** — deliberately reaches **cold, new, and going-inactive**
+  donors (driven by Model B) to *expand and retain* the pool. Every batch also includes a
+  slice of "long-shot" donors → keeps the pool growing **and** feeds failure-learning so the
+  model improves. The AI does not shrink outreach — it makes outreach scale.
 
 ### Medical honesty (non-negotiable)
 Thalassemia is a **lifelong** management condition (500–700 transfusions/lifetime); it is
@@ -62,9 +98,9 @@ is medically real but needs hospital EMR data that has **no open API in India** 
 
 | Role | What they do in ThalNet |
 |------|--------------------------|
-| **Patient / Bridge** | Raises a request; sees honest ops status only (donors contacted/confirmed, next transfusion due). No cure framing. |
-| **Donor** | Receives outreach, chats with the multilingual assistant, accepts/declines, checks eligibility. |
-| **Admin (Blood Warriors staff)** | Watches live requests, donor-pool health, predictions, and escalations on a dashboard. |
+| **Patient / Bridge** | Raises a request; sees honest ops status only (donors contacted/confirmed, **bridge integrity**, next transfusion due). No cure framing. |
+| **Donor** | **Personal Donation Clock** (when am I eligible, who near me needs me, reserve a slot); receives fatigue-aware outreach, chats with the multilingual assistant, accepts/declines. |
+| **Admin (Blood Warriors staff)** | Watches live requests, **bridge health board**, donor-pool/fatigue health, **India resilience heatmap**, predictions, and escalations on a dashboard. |
 | **The Agent (autonomous)** | Ranks → contacts → interprets → follows up → escalates → logs outcomes, with no human in the loop until escalation. |
 
 ## 4. Architecture
@@ -112,6 +148,15 @@ is medically real but needs hospital EMR data that has **no open API in India** 
 - **Matching + ML module** — *purpose:* score & rank donors for a request. *interface:*
   `rank_donors(request) -> [donor_id, score, reasons]`. *depends on:* model artifact in S3,
   blood-compatibility matrix, haversine geo.
+- **Bridge module (Auto-Bridge Builder)** — *purpose:* assemble & maintain the 8→1 bridge.
+  *interface:* `build_bridge(patient) -> [donor_ids, coverage_calendar, integrity_score]`,
+  `heal_bridge(bridgeId) -> [replacement_donor_ids]`. *logic:* hard filter (blood-compat +
+  eligible) → pick donors whose `next_eligible_date`s **stagger** across the cycle so coverage
+  is continuous → on churn/move, recompute and recruit replacements. *depends on:* Matching+ML
+  module, Bridges table.
+- **Resilience module** — *purpose:* region × blood-group supply health for the admin heatmap.
+  *interface:* `resilience_scores() -> [{region, blood_group, score, watch_in_days}]`.
+  *depends on:* Users (geo, active status, churn_risk).
 - **Agent module (Bedrock)** — *purpose:* compose outreach, hold conversations with memory,
   interpret replies, translate. *interface:* `compose()`, `interpret(reply)`, `chat(user,msg)`.
   *depends on:* Bedrock Claude Haiku, Conversations table.
@@ -123,8 +168,8 @@ is medically real but needs hospital EMR data that has **no open API in India** 
 
 | Table | Key | Notable attributes |
 |-------|-----|--------------------|
-| `Users` | PK `userId` | role, blood_group, gender, lat, lng, donor_type, eligibility_status, next_eligible_date, donations_till_date, calls_to_donations_ratio, **willingness_score**, **churn_risk**, consent flags |
-| `Bridges` | PK `bridgeId` | blood_group, quantity_required, frequency_in_days, expected_next_transfusion_date |
+| `Users` | PK `userId` | role, blood_group, gender, lat, lng, donor_type, eligibility_status, next_eligible_date, donations_till_date, calls_to_donations_ratio, **responsiveness_score**, **churn_risk**, consent flags |
+| `Bridges` | PK `bridgeId` | patientId, blood_group, quantity_required, frequency_in_days, expected_next_transfusion_date, **donor_ids[]**, **coverage_calendar**, **integrity_score** (Full/At-risk/Broken) |
 | `Requests` | PK `requestId` | bridgeId/patient, blood_group, needed_by, status (open/matched/fulfilled/escalated) |
 | `Conversations` | PK `userId`, SK `ts` | role (user/assistant), text, lang — **this is the memory** |
 | `Outcomes` | PK `requestId`, SK `donorId` | contacted_at, channel, reply, interpreted_label, result — **feeds learning** |
@@ -133,20 +178,28 @@ is medically real but needs hospital EMR data that has **no open API in India** 
 
 Trained on `Dataset.csv` (7,033 rows) in a SageMaker notebook with pandas + scikit-learn.
 
-- **Model A — Donation willingness / propensity** (classification): given donor features,
-  predict likelihood of donating when contacted. Signal from `calls_to_donations_ratio`,
-  `donated_earlier`, `donations_till_date`, `donor_type`, recency.
+> **Data-audit reality (EDA on the real file, see PROGRESS):** Model B is the strong model;
+> Model A has no true "contacted → donated" label so it is framed honestly as a *score*, not an
+> oracle. Drop dead columns (`role_status`, `status`, all-one-value). **Exclude
+> `inactive_trigger_comment` from Model B — it only exists for inactive rows = target leakage.**
+
+- **Model A — Donor Responsiveness Score** (classification *proxy*, framed honestly): estimates
+  how responsive/active a donor profile is. No real per-request "yes/no" outcome exists in the
+  data, so this is an **estimate**, not a willingness oracle. Signal from `calls_to_donations_ratio`,
+  `donations_till_date`, `donor_type`, recency.
 - **Model B — Inactivity / churn risk** (classification): predict `user_donation_active_status`
-  = Inactive (label already present, plus `inactive_trigger_comment`).
+  = Inactive. **Strong, verified signal** (One-Time 22% vs Regular 7% vs Other 0.15%; not-eligible
+  18% vs eligible 9%). Drives the **fatigue-aware cadence** action (contact / wait / appreciate / DND).
 - **Features:** blood_group, gender, donor_type, role, donations_till_date, cycle_of_donations,
   total_calls, frequency_in_days, calls_to_donations_ratio, days-since-last-donation,
-  eligibility_status, + distance-to-patient (computed at rank time).
+  eligibility_status, + distance-to-patient (computed at rank time). **Excluded:** `inactive_trigger_comment` (leakage), `role_status`/`status` (no variance).
 - **Serving:** model pickled → S3 → loaded once per Lambda cold start (no paid endpoint).
 
 **Final ranking score** for a request =
 `blood_compatible (hard filter) AND eligible_by_date (hard filter)` then weighted sum of
-`willingness_score`, `geo_proximity`, `(1 − churn_risk)`, `recency`. Returns ranked donors
-**with human-readable reasons** ("O+ match, 4 km away, 92% likely to respond").
+`responsiveness_score`, `geo_proximity`, `(1 − churn_risk)`, `recency`. Returns ranked donors
+**with human-readable reasons** ("O+ match, 4 km away, responsive profile"). Note: geo is coarse
+(~132 unique points) so it breaks ties more than it dominates.
 
 ## 8. AI agent & "failure learning"
 
@@ -187,18 +240,27 @@ Trained on `Dataset.csv` (7,033 rows) in a SageMaker notebook with pandas + scik
 WAF. Mentioned only as a "how this scales" slide. **Realistic total: < $10** if the
 SageMaker notebook is stopped when not training.
 
+**Deliberate deviation from the recommended deck:** the official Recommended Stack (Problem
+Statement pg 7) suggests deploying on **EC2 + CloudWatch**. We instead use **Amplify + Lambda
+(serverless)** — both are authorized services (pg 6). Rationale: serverless idle cost ≈ $0,
+which protects the $40 cap and demonstrates the cost/scale awareness the brief asks for. We
+call this out on the architecture slide as a conscious choice, not an oversight.
+
 ## 11. Scope — in vs. out
 
-**In (MVP we will demo):** request flow · donor chat w/ memory · ML ranking w/ reasons ·
-autonomous outreach loop (rank→contact→interpret→follow-up→escalate) · outcome logging +
-basic learning · admin dashboard · consent gate · deployed on AWS.
+**In (MVP we will demo):** **Auto-Bridge Builder + Self-Healing (flagship)** · **Personal
+Donation Clock** (donor) · **Fatigue-aware cadence** · **India Resilience Heatmap** (admin) ·
+request flow · donor chat w/ memory · ML ranking w/ reasons (responsiveness + churn) ·
+autonomous outreach loop (rank→contact→interpret→follow-up→escalate, **rank-don't-filter +
+growth mode**) · outcome logging + learning · consent gate · deployed on AWS.
 
-**Stretch (only if time):** real WhatsApp/SMS via a provider · live model retrain button ·
-Cognito auth · Athena analytics tab · richer multilingual set · honest patient status view.
+**Stretch (only if time):** **Carrier Cascade** (prevention) · shortage-forecast tile ·
+"what-if" resilience simulator · honest reliability streaks · real WhatsApp/SMS via a provider ·
+live model retrain button · Cognito auth · richer multilingual set.
 
 **Out / scale-path-only:** phenotype/HLA compatibility (no hospital EMR API in India) ·
-cure progress bars / gamification (medically wrong) · payments · full user management ·
-mobile apps · anything not in the brief.
+graph/social-network science · marketplace · donor-lifetime-value · cure progress bars /
+gamifying illness (medically wrong) · payments · full user management · mobile apps.
 
 ## 12. Mapping to evaluation criteria (5 × 20%)
 
@@ -239,5 +301,6 @@ mobile apps · anything not in the brief.
 
 ---
 
-*Next step after approval: I create `PROGRESS.md`, then we move to a step-by-step
-implementation plan and start building.*
+*Status: `PROGRESS.md` is live and updated each working session. Repo scaffolded, Python
+stack installed, data cleaned. Next build = ML notebook (Models A + B) → matching engine →
+agent → Step Functions loop → React shell.*
