@@ -132,4 +132,96 @@
 - **Env note:** node/npm + aws CLI not installed on the machine → UI + deploy blocked until then.
 - (Personal handoff snapshot kept locally in gitignored `private/SESSION_CONTEXT.md`.)
 
+### Supply-chain API — full backend wired to real data (2026-06-06)
+
+**Motivation:** Backend had a full donor/patient/bridge stack but ZERO connection to
+the real supply data (blood_stock_long.csv, blood_banks.csv) or the optimizer outputs.
+The three missing user-facing signals: "how urgently is my blood group needed?",
+"which nearby banks have stock?", "which donors should be contacted?". This session
+wired all three.
+
+**Problem found on startup — store.py killed all donor/patient routes:**
+`store.py` calls `joblib.load(models/churn_model.pkl)` on first request. Two failure modes:
+(a) model file missing → FileNotFoundError; (b) pkl saved with sklearn 1.5.0, env now
+running sklearn 1.9.0 → `AttributeError: _RemainderColsList` during unpickling.
+Either way: 500 on every `/admin/dashboard`, `/donors/`, `/patients/` call.
+**Fix:** wrapped `joblib.load` in try/except + added `os.path.exists` guard in `_score()`.
+Falls back to `default=0.5` for both churn_risk and responsiveness — API stays live, ML
+scores become neutral until the models are retrained with the current sklearn version.
+**Why acceptable:** neutral scores still allow proximity + eligibility ranking in `matching.py`;
+the ML layer improves ranking but isn't load-bearing for the demo.
+
+**optimizer refresh:**
+Re-ran `python -m optimizer.run --mode both --demand-scale 30 --safety-stock 8 --min-reserve 3`.
+This replaces the baseline (all-OK, 4-donor) outputs with realistic ones:
+- AB- **CRITICAL** (1.6 days coverage) · AB+/O+/B+/O- **LOW** (3.9–7.0 days)
+- 4345 donors to mobilize across 8 blood groups
+- 312 bank→bank demand transfers (2877 units) + 7183 national safety-stock moves
+These files (`data/optimizer/*.csv`) are now the live source-of-truth for the API.
+
+**New file: `backend/app/supply_store.py`**
+Pure-stdlib CSV reader (no pandas dependency) with lru_cache. Key design choices:
+- **e-RaktKosh normalisation:** blood groups in blood_stock_long.csv come in two
+  formats: `"A+Ve"` (old style) and `"A +ve"` (new style, space before sign) plus
+  uppercase variants `"Oh+VE"`. A single map keyed on `.lower()` handles all variants
+  → canonical "A+", "O-", "Bombay" etc., matching compat.py.
+- **Geo proximity without per-bank lat/lon:** the e-RaktKosh API returns no
+  coordinates for banks. Solved via district centroid lookup: when a caller passes
+  `(lat, lon)`, `nearest_districts()` finds the top-N closest Telangana district
+  centroids (imported from `optimizer.geo`) and filters banks to those districts,
+  sorted nearest-first. Falls back to state-level for non-TG queries via `STATE_CENTROIDS`.
+- **Aggregation:** banks_with_stock aggregates available_units per (bank_id × blood_group ×
+  component_type), joining the bank registry for phone/email, and annotates each result
+  with `approx_km_from_query` when a geo query is active.
+- `national_kpis()` is a single-call snapshot (3863 banks, 1,070,867 units, 35 states,
+  critical/low groups, donors to mobilize) used by the admin dashboard header.
+
+**New file: `backend/app/routers/supply.py`** — 8 endpoints:
+| Route | What it serves |
+|---|---|
+| `GET /supply/kpis` | National snapshot (banks, units, critical groups, mobilization count) |
+| `GET /supply/summary` | Stock by blood group + component, filterable by state/district |
+| `GET /supply/banks` | Banks with stock — geo query (lat/lon auto-resolves to nearest districts) or explicit district/state filter |
+| `GET /supply/demand-forecast` | Urgency per blood group from optimizer shortage report |
+| `GET /supply/shortage` | Full shortage breakdown (critical / low / ok) |
+| `GET /supply/mobilization` | Ranked donor list for outreach (Layer 1 → Layer 2 seam) |
+| `GET /supply/transfers` | Bank-to-bank transfer plan from optimizer |
+| `GET /supply/under-safety` | Banks still below safety floor after rebalancing |
+
+**Updated `backend/app/routers/admin.py`:**
+- `GET /admin/dashboard` now includes a `supply` sub-object (national KPIs) so the
+  admin single-call gets both the donor/patient/bridge picture AND the blood supply
+  snapshot — Layer 1 + Layer 2 in one payload.
+- New `GET /admin/supply-overview`: full shortage breakdown + recommendation string
+  ("URGENT: X groups critically low…" / "All groups adequately stocked").
+
+**Updated `backend/app/main.py`:** registered supply router; version bumped to 0.2.0.
+
+**Deps installed (break-system-packages — local dev only):**
+`fastapi==0.136.3 uvicorn==0.49.0 pydantic==2.13.4 pandas==3.0.3 numpy==2.4.6
+scikit-learn==1.9.0 joblib==1.5.3 mangum==0.21.0 boto3==1.43.24`
+Note: existing pkl models were saved with sklearn 1.5.0 — need retraining. graceful fallback active.
+
+**Verified live:**
+```
+GET /supply/kpis         → 3863 banks, 1,070,867 units, 35 states, critical: [AB-]
+GET /supply/demand-forecast → AB- CRITICAL 1.6d · AB+/O+/B+/O- LOW 3.9–7.0d
+GET /supply/banks?lat=17.385&lon=78.486&blood_group=O%2B → 5 banks, nearest ~19.8km
+GET /supply/mobilization?blood_group=AB- → 32 donors, ranked by proximity
+GET /admin/dashboard     → donors:4446 patients:84 supply.critical:[AB-] donors_to_mobilize:4345
+GET /admin/supply-overview → CRITICAL:1 LOW:4 + action recommendation string
+```
+
+**Total registered routes (24):**
+`/ /health` + 4 patient + 5 donor + 4 admin + 8 supply
+
+**AWS path for this layer (next steps):**
+- S3: upload blood_stock_long.csv, blood_banks.csv, Dataset.csv → s3://thalnet-data/
+- supply_store.py data load: swap `open(STOCK_CSV)` for `boto3.client('s3').get_object()`
+  with same lru_cache wrapper; add EventBridge rule to re-run scraper daily and update S3
+- Lambda: zip backend/ + requirements, `mangum.Mangum(app)` already wired as handler
+- API Gateway (HTTP API): route `$default` → Lambda → instant HTTPS endpoint
+- DynamoDB: `donors` table (PK=user_id) for fast single-record lookup in matching.py
+  (current in-memory load of 7k-row CSV is fine at hackathon scale, matters at 100k+)
+
 <!-- next entries below -->

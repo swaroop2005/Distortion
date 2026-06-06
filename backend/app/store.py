@@ -27,15 +27,26 @@ DONOR_ROLES = {"Emergency Donor", "Bridge Donor"}
 PATIENT_ROLES = {"Patient"}
 
 
-def _score(df: pd.DataFrame, model_name: str, out_col: str) -> pd.DataFrame:
-    """Attach P(positive) from a saved {pipeline,cat_features,num_features} pkl."""
+def _score(df: pd.DataFrame, model_name: str, out_col: str, default: float = 0.5) -> pd.DataFrame:
+    """Attach P(positive) from a saved {pipeline,cat_features,num_features} pkl.
+
+    Falls back to `default` score for every row when the model file is missing —
+    the API stays live during the build phase before ML training is complete.
+    """
     path = os.path.join(MODEL_DIR, f"{model_name}.pkl")
-    bundle = joblib.load(path)
-    pipe, cats, nums = bundle["pipeline"], bundle["cat_features"], bundle["num_features"]
-    X = df[cats + nums].copy()
-    for c in cats:
-        X[c] = X[c].astype(str).str.strip().replace({"nan": None})
-    df[out_col] = pipe.predict_proba(X)[:, 1].round(4)
+    if not os.path.exists(path):
+        df[out_col] = default
+        return df
+    try:
+        bundle = joblib.load(path)
+        pipe, cats, nums = bundle["pipeline"], bundle["cat_features"], bundle["num_features"]
+        X = df[cats + nums].copy()
+        for c in cats:
+            X[c] = X[c].astype(str).str.strip().replace({"nan": None})
+        df[out_col] = pipe.predict_proba(X)[:, 1].round(4)
+    except Exception:
+        # pkl version mismatch or schema change — fall back to neutral score until retrained
+        df[out_col] = default
     return df
 
 

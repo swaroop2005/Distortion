@@ -1,4 +1,4 @@
-"""Admin routes — dashboard aggregations, bridge health, churn alerts."""
+"""Admin routes — dashboard aggregations, bridge health, churn alerts, supply KPIs."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Query
@@ -7,6 +7,7 @@ from ..bridge import all_bridges, bridge_health_summary
 from ..compat import normalize_blood_group
 from ..eligibility import is_eligible
 from ..store import all_donors, all_patients
+from ..supply_store import national_kpis, shortage_report
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -15,7 +16,11 @@ CHURN_THRESHOLD = 0.6
 
 @router.get("/dashboard")
 def dashboard():
-    """Single-call dashboard payload for the admin view."""
+    """Single-call dashboard payload for the admin view.
+
+    Combines Layer 2 donor/patient/bridge stats with Layer 1 supply KPIs so
+    the admin sees the full picture in one request.
+    """
     donors = all_donors()
     patients = all_patients()
 
@@ -24,20 +29,74 @@ def dashboard():
         d for d in donors if float(d.get("churn_risk", 0)) >= CHURN_THRESHOLD
     ]
 
-    # Blood group distribution
+    # Blood group distribution across donors
     group_counts: dict[str, int] = {}
     for d in donors:
         g = normalize_blood_group(d.get("blood_group"))
         if g:
             group_counts[g] = group_counts.get(g, 0) + 1
 
+    # Upcoming transfusion load (patients with dates in Dataset.csv)
+    upcoming_transfusions = sum(
+        1 for p in patients if p.get("expected_next_transfusion_date")
+    )
+
+    # Layer 1 supply snapshot (national blood bank data)
+    supply = national_kpis()
+
     return {
+        # Layer 2 — donor/patient/bridge stats
         "total_donors": len(donors),
         "eligible_donors": eligible,
         "total_patients": len(patients),
+        "upcoming_transfusions": upcoming_transfusions,
         "high_churn_count": len(high_churn),
         "blood_group_distribution": group_counts,
         "bridge_health": bridge_health_summary(),
+        # Layer 1 — national blood supply snapshot
+        "supply": supply,
+    }
+
+
+@router.get("/supply-overview")
+def supply_overview():
+    """
+    Detailed supply-chain overview for the admin command-center panel.
+
+    Shows shortage by blood group (from optimizer forecast) + national KPIs.
+    """
+    kpis = national_kpis()
+    shortage = shortage_report()
+
+    for r in shortage:
+        for k in ("supply_units", "horizon_demand", "daily_demand",
+                  "days_of_coverage", "shortfall_units"):
+            try:
+                r[k] = float(r[k])
+            except (ValueError, TypeError, KeyError):
+                r[k] = 0.0
+
+    shortage.sort(key=lambda r: r.get("days_of_coverage", 9999))
+    critical = [r for r in shortage if r.get("status") == "CRITICAL"]
+    low = [r for r in shortage if r.get("status") == "LOW"]
+    ok = [r for r in shortage if r.get("status") == "OK"]
+
+    return {
+        "kpis": kpis,
+        "shortage": {
+            "critical": critical,
+            "low": low,
+            "ok": ok,
+        },
+        "action_required": bool(critical),
+        "recommendation": (
+            f"URGENT: {len(critical)} blood group(s) critically low. "
+            f"Mobilize donors + trigger inter-bank transfers immediately."
+            if critical else
+            f"{len(low)} group(s) running low. Monitor + schedule donor outreach."
+            if low else
+            "All blood groups adequately stocked."
+        ),
     }
 
 
