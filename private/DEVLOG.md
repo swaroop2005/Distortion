@@ -224,4 +224,26 @@ GET /admin/supply-overview → CRITICAL:1 LOW:4 + action recommendation string
 - DynamoDB: `donors` table (PK=user_id) for fast single-record lookup in matching.py
   (current in-memory load of 7k-row CSV is fine at hackathon scale, matters at 100k+)
 
+## 2026-06-07
+
+### Website chatbot — shipped (merged to main, `feb660e`)
+- **What:** role-aware, read-only, multilingual (EN/HI/TE) chatbot served by `POST /chat`. Intent-router + 5 grounded handlers (`personal_eligibility`, `bridge_status`, `stock_lookup`, `general_faq`, `fallback`). Mock-first ($0, offline); Bedrock Haiku switchable.
+- **Architecture (Approach C):** handler deterministically fetches ONLY real data (store/eligibility/bridge/supply_store/curated FAQ) → builds `grounded_facts` → LLM only *phrases* it. The LLM never sees raw data and never invents numbers. New files: `services/chatbot.py`, `services/voice.py` (shared empathy layer: tone guide + exemplars, no fine-tuning/no cure language), `services/knowledge.py` (curated cite-able FAQ), `routers/chat.py`.
+- **Adapters extended:** added `classify_intent` + `compose_chat_reply` to both MockLLM and BedrockLLM in `outreach.py` (purely additive).
+- **Also fixed a real boot bug:** `main.py` referenced an empty `routers/supply.py`; wired the real `supply_routes` router so the app boots (was crashing on import).
+- **Process:** brainstorm → spec → plan → subagent-driven build with two-stage review per task. Review caught/fixed: AB+→B+ blood-group mis-extraction, inactive donors inflating bridge counts, NaN-latitude guard, substring FAQ false-positives, dishonest faq-miss intent label.
+- **Tests:** 5 smoke modules (`test_voice/knowledge/outreach_chat/chatbot/chat_endpoint`), all green.
+
+### Wellness suggestions — shipped (merged to main, `6dcbba4`)
+- **What:** new `wellness` chatbot intent giving role-aware, source-cited, NON-prescriptive suggestions (diet / hydration & daily habits / emotional wellbeing).
+- **Safety-first design:** I pushed back on the original "scrape Reddit + train the model on health advice" idea — for thalassemia that's genuinely dangerous (the classic iron trap: iron-rich food is good donor-recovery advice but HARMFUL for transfusion-dependent patients due to iron overload). Reframed to: curated CSV from authoritative sources (TIF, Cooley's Anemia Foundation, NHS, Blood Warriors), NO Reddit medical content, NO fine-tuning (doesn't fit Bedrock-Haiku/<$10/no-SageMaker stack anyway).
+- **How it's safe:** `data/wellness_suggestions.csv` (14 rows) + `services/wellness.py` filter by audience (patient↔donor never cross — the iron guard); `caution_flag` surfaces the iron-overload note first for patients; every wellness reply ends with an always-on, code-enforced "not medical advice — check with your hematologist" disclaimer.
+- **Review caught:** cache-poisoning risk (return copies), Bedrock classify prompt missing the `wellness` label (would've disabled wellness on real Haiku), and emotional-distress vocab missing from intent keywords (whole topic unreachable on the default mock backend) — all fixed.
+- **Tests:** added `test_wellness`; full suite (6 modules) green.
+
+### Next (queued)
+- **Community Hub** (vision): donor↔patient connection system (mutual-accept → private chat), community feed (LinkedIn+Reddit style, upvotes/urgent boost), discussion threads (nested replies, best-answer, search, AI summaries), grounded AI assistant.
+- **ML/agent deepening:** Triage = Bridge Suitability Score (weighted ranking MVP, no labels); Failure-Learning = Donor Failure Risk score + churn prediction + self-heal trigger. Feature columns mapped to the real `Dataset.csv` schema (eligibility/reliability/bridge-history/geo/compatibility).
+- Existing Part B (outreach hardening) spec still open: `docs/superpowers/specs/2026-06-07-chatbot-and-outreach-design.md`.
+
 <!-- next entries below -->
