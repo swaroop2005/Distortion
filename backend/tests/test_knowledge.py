@@ -21,8 +21,16 @@ def test_lookup_no_match_returns_none():
     assert knowledge.lookup("what's the weather in paris") is None
 
 
+def test_lookup_no_substring_false_positives():
+    # ordinary words must NOT trigger FAQ keyword matches
+    assert knowledge.lookup("I ride a bicycle to work") is None
+    assert knowledge.lookup("I am from Cambridge") is None
+    assert knowledge.lookup("that was 190 days ago") is None
+
+
 if __name__ == "__main__":
     test_entries_have_source()
     test_lookup_matches_thalassemia()
     test_lookup_no_match_returns_none()
+    test_lookup_no_substring_false_positives()
     print("test_knowledge OK")

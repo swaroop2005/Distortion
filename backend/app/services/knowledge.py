@@ -9,6 +9,7 @@ Run as a smoke test:  .venv/bin/python -m backend.tests.test_knowledge
 """
 from __future__ import annotations
 
+import re
 from typing import Optional
 
 FAQ: list[dict] = [
@@ -57,6 +58,11 @@ FAQ: list[dict] = [
 ]
 
 
+def _matches(keyword: str, text: str) -> bool:
+    """True if keyword appears in text on word boundaries (case-insensitive already lowered)."""
+    return re.search(r"\b" + re.escape(keyword) + r"\b", text) is not None
+
+
 def lookup(message: str) -> Optional[dict]:
     """Return the best-matching FAQ entry, or None if nothing matches.
 
@@ -67,7 +73,7 @@ def lookup(message: str) -> Optional[dict]:
     best: Optional[dict] = None
     best_score = 0
     for entry in FAQ:
-        score = sum(len(kw) for kw in entry["keywords"] if kw in text)
+        score = sum(len(kw) for kw in entry["keywords"] if _matches(kw, text))
         if score > best_score:
             best_score = score
             best = entry
