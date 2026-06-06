@@ -1,4 +1,1 @@
 mode,blood_group,units,distance_km,from_bank,from_district,from_type,from_capacity,to_bank,to_district,to_type,to_capacity,reason
-demand,AB-,2,19.8,Medicover Hospital Blood Centre,Rangareddy,Private,76,Apollo Hospitals Enterprise Ltd,Hyderabad,Private,1876,2u AB-: Medicover Hospital Blood Centre → Apollo Hospitals Enterprise Ltd (19.8 km)
-demand,AB-,1,19.8,Sangam Blood Centre,Rangareddy,Charitable/Vol,222,Apollo Hospitals Enterprise Ltd,Hyderabad,Private,1876,1u AB-: Sangam Blood Centre → Apollo Hospitals Enterprise Ltd (19.8 km)
-demand,AB-,1,19.8,Asian Institute Of Gastroenterology Private Limited  Blood Centre,Rangareddy,Private,857,Apollo Hospitals Enterprise Ltd,Hyderabad,Private,1876,1u AB-: Asian Institute Of Gastroenterology Private Limited  Blood Centre → Apollo Hospitals Enterprise Ltd (19.8 km)

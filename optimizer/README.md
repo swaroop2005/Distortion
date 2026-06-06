@@ -42,6 +42,8 @@ to be ThalNet's outreach input.
    * **`both`** runs demand (TG) + rebalance (national).
    Solved with **PuLP/CBC** for small instances, else a deterministic **greedy**
    nearest-source fallback (also used for the large national instance).
+   A **reserve floor** (`--min-reserve`, default 3) guarantees a source bank is
+   never drained below a minimum it keeps per blood group for its own patients.
    * **Mobilization** (`mobilization.py`) — residual demand deficits → the nearest
      eligible, compatible donors needed to close the gap (the **ThalNet hand-off**).
 
@@ -58,6 +60,7 @@ python -m optimizer.run                           # demand mode, Telangana, 30 d
 python -m optimizer.run --mode rebalance          # national safety-stock rebalance
 python -m optimizer.run --mode both               # both modes
 python -m optimizer.run --safety-stock 10         # rebalance target per bank/group
+python -m optimizer.run --min-reserve 5           # units a source bank always keeps
 python -m optimizer.run --demand-scale 30         # model the real patient load
 python -m optimizer.run --greedy                  # skip the MILP solver
 python -m optimizer.run --allow-substitution      # allow O-/ABO-compatible donors

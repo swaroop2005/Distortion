@@ -92,6 +92,7 @@ class Settings:
     demand_scale: float = 1.0         # scale sample demand toward the real patient base
     mode: str = "demand"              # demand | rebalance | both
     safety_stock: int = 8             # per-bank per-group target for rebalance mode
+    min_reserve: int = 3              # units a source bank always keeps per group (never drained)
 
     use_solver: bool = True           # PuLP MILP; falls back to greedy if unavailable
     allow_substitution: bool = False  # enable O-/compatible substitution edges

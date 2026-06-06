@@ -62,6 +62,7 @@ def build_settings(args: argparse.Namespace) -> Settings:
     s.demand_scale = args.demand_scale
     s.mode = args.mode
     s.safety_stock = args.safety_stock
+    s.min_reserve = args.min_reserve
     s.use_solver = not args.greedy
     s.allow_substitution = args.allow_substitution
     return s
@@ -78,6 +79,8 @@ def main(argv: list[str] | None = None) -> None:
                    help="scale sample demand toward the real patient base (default 1.0)")
     p.add_argument("--safety-stock", type=int, default=8,
                    help="rebalance target units per bank per group (default 8)")
+    p.add_argument("--min-reserve", type=int, default=3,
+                   help="units a source bank always keeps per group, never drained (default 3)")
     p.add_argument("--greedy", action="store_true", help="force greedy optimizer (skip PuLP MILP)")
     p.add_argument("--allow-substitution", action="store_true",
                    help="allow O-/ABO-compatible donor substitution")

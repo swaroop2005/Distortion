@@ -1,1 +1,5 @@
 region,district,blood_group,donor_id,donor_group,distance_km,eligibility,next_eligible_date,rank,units_contributed
+Telangana,Hyderabad,AB-,\x5ceb95511156bb425d39a83759296dbfef9a0c8e909e6e80862cc5409a9456fc,AB-,1.1,eligible,2025-04-25,1,1
+Telangana,Hyderabad,AB-,\x135e0b4fe6a9a407b35a42f3df23db3c53236584b74268bbb594507f87b6ae5e,AB-,1.1,eligible,2025-05-26,2,1
+Telangana,Hyderabad,AB-,\xb6dabe0499e80bf781cfc2f6df5cead72b12d3fb4ec035dfe68ec91a48914c86,AB-,1.1,eligible,2025-07-30,3,1
+Telangana,Hyderabad,AB-,\xcd0c6253502b606f95e37fac5d34f22c653edb7ef179a3c33f2fa97aa90ebad4,AB-,1.1,eligible,,4,1

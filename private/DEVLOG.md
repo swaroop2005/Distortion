@@ -100,4 +100,10 @@
 - **Smoke tests:** demand@scale10 → 558 bank→bank moves (real names: Apollo, Indian Red Cross…), 3,355 donors. rebalance national → 7,183 moves/27,830 units; 5,957 bank×group still below safety = honest finding (national safety stock > available surplus). Dashboard regenerated + JSON/JS validated.
 - **Known modeling note:** demand-mode funnels most transfers to Apollo (Hyderabad) because Hyderabad dominates both demand and is its district's largest hub bank. Acceptable for demo; could spread across multiple receiving banks later.
 
+### Bank reserve floor — never drain a bank (2026-06-06)
+- **Why (user):** a source bank must keep enough for its own patients; don't empty any single bank to help another.
+- **Change:** added `Settings.min_reserve` (default 3) + `--min-reserve`. Demand-mode source cap = `min(district-surplus share, stock − min_reserve)` so a bank never gives below its floor even when its district has no local demand (previously ratio=1 could drain a bank to 0). Rebalance-mode source floor = `max(safety_stock, min_reserve)`.
+- **Verified invariant:** across reserve=0/3/10 at demand-scale 30, **0 source banks left below reserve**; units moved scale down sensibly (4357 → 2877 → 1413) as reserve rises. Confirms banks retain their reserve and the knob behaves monotonically.
+- **Side effect (correct):** with a reserve, less surplus is available → more residual demand → more donor mobilization. Conservative + honest.
+
 <!-- next entries below -->

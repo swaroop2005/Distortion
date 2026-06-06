@@ -113,7 +113,7 @@ def _transship(sources, sinks, group: str, mode: str, use_solver: bool):
 # --------------------------------------------------------------------------- #
 # Mode: demand-driven (per-district patient demand)
 # --------------------------------------------------------------------------- #
-def _demand_nodes(banks: list[dict], demand: dict, group: str):
+def _demand_nodes(banks: list[dict], demand: dict, group: str, min_reserve: int):
     by_dist: dict[str, list[dict]] = defaultdict(list)
     for b in banks:
         by_dist[b["district"]].append(b)
@@ -134,7 +134,10 @@ def _demand_nodes(banks: list[dict], demand: dict, group: str):
         elif supply > dem and supply > 0:
             ratio = (supply - dem) / supply
             for b in local:
-                cap = b["stock"].get(group, 0) * ratio
+                stock = b["stock"].get(group, 0)
+                # give the proportional district surplus, but NEVER drop below the
+                # bank's own reserve floor — no bank is drained for someone else.
+                cap = min(stock * ratio, max(0.0, stock - min_reserve))
                 if cap >= 1:
                     sources.append((b, cap))
     return sources, sinks, direct_residual
@@ -145,7 +148,7 @@ def redistribute_demand(banks: list[dict], demand: dict, settings: Settings):
     transfers, residual = [], {}
     groups = {g for (_d, g) in demand["by_district_group"]}
     for group in sorted(groups):
-        sources, sinks, direct = _demand_nodes(banks, demand, group)
+        sources, sinks, direct = _demand_nodes(banks, demand, group, settings.min_reserve)
         for dist, need in direct.items():
             residual[(dist, group)] = round(need, 1)
         plan, received = _transship(sources, sinks, group, "demand", settings.use_solver)
@@ -161,14 +164,15 @@ def redistribute_demand(banks: list[dict], demand: dict, settings: Settings):
 # --------------------------------------------------------------------------- #
 # Mode: safety-stock rebalance (per-bank target, works nationally)
 # --------------------------------------------------------------------------- #
-def _rebalance_nodes(banks: list[dict], group: str, safety: int):
+def _rebalance_nodes(banks: list[dict], group: str, safety: int, min_reserve: int):
+    floor = max(safety, min_reserve)  # a source never keeps less than the reserve
     sources, sinks = [], []
     for b in banks:
         if group not in b["stock"]:
             continue  # only rebalance among banks that handle this group
         cur = b["stock"][group]
-        if cur > safety:
-            sources.append((b, cur - safety))
+        if cur > floor:
+            sources.append((b, cur - floor))
         elif cur < safety:
             sinks.append((b, safety - cur))
     return sources, sinks
@@ -184,7 +188,7 @@ def redistribute_rebalance(banks: list[dict], settings: Settings):
     for b in banks:
         groups |= set(b["stock"])
     for group in sorted(groups):
-        sources, sinks = _rebalance_nodes(banks, group, settings.safety_stock)
+        sources, sinks = _rebalance_nodes(banks, group, settings.safety_stock, settings.min_reserve)
         plan, received = _transship(sources, sinks, group, "rebalance", settings.use_solver)
         transfers.extend(plan)
         for b, need in sinks:
