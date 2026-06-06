@@ -1,0 +1,37 @@
+{
+  "churn_model": {
+    "target": "target_churn",
+    "features": [
+      "donor_type",
+      "eligibility_status",
+      "blood_group",
+      "gender",
+      "donations_till_date",
+      "total_calls",
+      "frequency_in_days",
+      "calls_to_donations_ratio"
+    ],
+    "n_rows": 7033,
+    "positives": 682,
+    "cv_roc_auc": 0.9683,
+    "cv_pr_auc": 0.7139,
+    "base_rate": 0.097
+  },
+  "responsiveness_model": {
+    "target": "target_willing",
+    "features": [
+      "eligibility_status",
+      "blood_group",
+      "gender",
+      "total_calls",
+      "frequency_in_days",
+      "days_since_last_contact"
+    ],
+    "n_rows": 7033,
+    "positives": 1719,
+    "cv_roc_auc": 0.8647,
+    "cv_pr_auc": 0.6227,
+    "base_rate": 0.2444
+  },
+  "_note": "Model B (churn) is the headline: real Inactive label, strong call-behavior signal (~0.96 CV ROC). Recency/eligibility-date columns were dropped as circular leakage. Model A (responsiveness) is a softer PROXY (~0.86 CV ROC): target_willing is 'ever donated', so donation-count and donor_type were dropped to avoid tautology. Report A with its caveat; never headline it."
+}

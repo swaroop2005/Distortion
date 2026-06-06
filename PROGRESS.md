@@ -62,9 +62,13 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
 - [ ] Demo dry-run + submit
 
 ### 🏗️ In progress
-- [ ] ML notebook #4 — Model A (willingness) + Model B (churn) on `data/clean.csv` — _Claude (next)_
+- [ ] #4 Shared backend modules — `geo.py` (reuse optimizer haversine) + `compat.py` (ABO+Rh) + `eligibility.py` (90-day) — _Claude (next: finish compat+eligibility)_
+
+### ✅ Done (this session, cont.)
+- [x] 2026-06-06 — #3 `backend/app/store.py` — loads `clean.csv`, splits 84 patients / 4446 donors, attaches churn_risk + responsiveness from pkls, synth consent. Smoke-tested — _Claude_
 
 ### ✅ Done
+- [x] 2026-06-06 — **#4 ML notebook** `notebooks/train_models.py` → `models/{churn,responsiveness}_model.pkl` + `metrics.json`. Caught + killed ROC=1.000 leakage. Honest CV: **churn 0.968 ROC / 0.714 PR / 0.94 recall**, responsiveness 0.865 (proxy). Artifact load+score smoke-tested — _Claude_
 - [x] 2026-06-06 — Read all hackathon docs (problem, AWS guide, dataset, criteria) — _Claude_
 - [x] 2026-06-06 — Reviewed live Blood Warriors site for gaps/opportunities — _Claude_
 - [x] 2026-06-06 — Cloned repo, inspected structure — _Claude_
@@ -81,6 +85,26 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
 ---
 
 ## Decisions log
+- **2026-06-06** — **Architecture locked: full React + AWS web app, 100% serverless.** Stack =
+  Amplify + Lambda/API Gateway (Mangum) + DynamoDB + Bedrock **Haiku** + S3 + SES + Step
+  Functions. Verified <$10 under the $40 cap (cost is service-choice, not app-vs-HTML). BANNED
+  (bill while idle): EC2, RDS/Aurora, OpenSearch, Kinesis, SageMaker endpoint, NAT GW, WAF. ML
+  served by loading `.pkl` *inside* Lambda = $0. **Cognito real login** (role claim → patient/
+  donor/admin dashboard). **Local-first dev** (React Vite + FastAPI on localhost = $0), AWS
+  deploy last so demo runs even if AWS slips. **Build order: Patient view end-to-end FIRST**,
+  then clone Donor, then Admin. 22 phase-ordered tasks created (see TaskList).
+- **2026-06-06** — Mapped our automations 1:1 to the 8 required capabilities (Problem Statement
+  pg 4) — all covered. New automations to fold in: predictive bridge-break alarm (proactive
+  self-heal), no-show buffer (2nd use of responsiveness model), fatigue/contact throttle.
+- **2026-06-06** — **ML leakage fix (Models A & B).** First run gave ROC-AUC **1.000** = leakage,
+  not success. Two leak types removed: (1) direct — `user_donation_active_status`,
+  `inactive_trigger_comment`, `role_status`, `status`; (2) **circular/definitional** — churn
+  recency cols (`days_since_last_donation`, `days_to_next_eligible`, `cycle_of_donations`) restate
+  the Inactive label, and donation-count/`donor_type` tautologically define `target_willing`.
+  Final feature sets: **churn** = donor_type + eligibility + blood_group + gender + donations +
+  calls + freq + calls_to_donations_ratio (CV ROC 0.968); **responsiveness** = eligibility +
+  blood_group + gender + total_calls + freq + days_since_last_contact (CV ROC 0.865, framed as
+  proxy). Reported via 5-fold CV, not a single split. Headline = churn only.
 - **2026-06-06** — Direction: build the **full platform thin + 2 deep AI spikes** (ML matching
   + autonomous agent), not one narrow slice.
 - **2026-06-06** — Stack: React (Amplify) · FastAPI on Lambda+API Gateway · DynamoDB · Bedrock
@@ -112,6 +136,13 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
 
 ## Daily log (newest first)
 ### 2026-06-06
+- **Built #4 ML notebook** (`notebooks/train_models.py`). First pass scored ROC-AUC 1.000 on
+  BOTH models → stopped, treated as leakage red flag (not a win). Diagnosed: churn recency cols
+  *define* the Inactive label (circular), and `target_willing`=ever-donated is tautological with
+  donation-count/donor_type features. Rebuilt with principled feature sets + 5-fold CV. Honest
+  numbers: churn 0.968 ROC / 0.94 Inactive-recall (strong, real); responsiveness 0.865 (proxy,
+  caveated). Saved `models/{churn,responsiveness}_model.pkl` + `metrics.json`; smoke-tested the
+  artifact load+score path the RankDonors Lambda will use.
 - Brainstormed direction with Claude; chose ThalNet full-platform approach.
 - Design doc + this tracker created. Pending team approval to start building.
 - Refined idea after competitive/medical review: adopted 3-agent framing, dropped
@@ -126,6 +157,11 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
 - Reconciled DESIGN.md: corrected BW chatbot description, status → building, added deviation note.
 - Deep BW audit (about/impact/REAN): their data/dashboard is all PREVENTION (carrier screening,
   3445 tests, 7.3% carriers). Donor-ops side = no automation/dashboard/prediction → wide open.
+- **Verified 8→1 Blood Bridge is REAL** (BW's own model: 8–10 donors/patient, every 15–20 days,
+  58 patients/579 volunteers). Manual-pain real (Problem Statement pg 2); churn real (in dataset).
+  HPLC-silo + antigen-tracking = unverified hypotheses → questions for BW insider.
+- **Wrote `docs/CONTEXT.md`** — self-contained handoff to start a fresh chat clean.
+- **Pushed all to `main`** (fast-forward 30736f7..4430e9b); main == branch, full picture.
 - **Merged Vijetha's `optimizer/` + `project/` into `scaffold-and-design`** (was a stuck/empty
   merge w/ MERGE_HEAD; aborted + clean re-merge — disjoint files, no real conflict). Backed up
   DESIGN.md first; session edits intact.
