@@ -18,6 +18,29 @@ manual effort.
 
 ## 2. What we are building
 
+### System = two layers (the team's two halves, joined)
+ThalNet is **one system in two layers**, one per teammate, joined by a single artifact:
+
+```
+LAYER 1 — SUPPLY COMMAND CENTER  (Vijetha · project/ + optimizer/)   [BUILT]
+  real e-RaktKosh national data (3,863 banks, 44,675 rows) → predict shortage
+  → optimize: redistribution MILP (bank→bank) + MOBILIZATION PLAN (which donors)
+  → dashboard.html (admin "where / what / how much")
+                         │  mobilization_plan.csv  ← THE SEAM
+                         ▼  (region, district, blood_group, donor_id, units)
+LAYER 2 — AUTONOMOUS COORDINATION  (Swaroop+Claude · backend/ ThalNet)
+  Triage (rank + Auto-Bridge Builder + antigen/geo/ML) → Outreach (Bedrock
+  multilingual, reply-interpret, fatigue cadence) → Escalate+Learn (failure
+  learning). The "who + actually act" half.
+```
+
+> **One line:** predict where blood runs short → optimize the fix → autonomously mobilize the
+> right donors → learn. **Predict & Optimize → Coordinate & Learn.**
+> The optimizer's `data/optimizer/mobilization_plan.csv` is ThalNet's outreach input. The
+> optimizer's `dashboard.html` IS our admin resilience/forecast surface (so we do **not**
+> rebuild a separate "resilience heatmap").
+
+### Layer 2 (ThalNet) detail — three deep AI spikes
 **ThalNet** — one platform that covers the whole workflow (a "walking skeleton" of the
 entire brief) with **three deep AI spikes** where judges reward depth most:
 
@@ -44,12 +67,20 @@ real but intentionally thin, so the demo *feels* like a complete product end-to-
 - **Fatigue-Aware Cadence** — Model B (churn) doesn't just score risk, it picks the *action*:
   **contact now / wait / send appreciation / do-not-disturb** — so outreach scales without
   burning donors out.
-- **India Resilience Heatmap** (admin) — per region × blood group, a resilience score
-  (active donors vs demand) → "Hyderabad O+ 82/100, Nagpur 46/100." The supply-ops dashboard
-  BW does not have. Optional **shortage-forecast** tile (labeled an estimate — patient data is thin).
+- **Supply Command Center** (admin) — **already built** by Layer 1 (`optimizer/dashboard.html`):
+  real national e-RaktKosh data, days-of-supply per blood group, district shortfall heatmap,
+  redistribution transfers, donor-mobilization plan, scenario selector (baseline/10×/30×). This
+  is the supply-ops dashboard BW does not have. **We adopt it as-is; ThalNet does not rebuild it.**
 - **Carrier Cascade** (prevention, stretch) — a positive carrier result auto-triggers
   multilingual nudges to screen at-risk family. One test → a family screened. Serves the
   "Thalassemia-Free India 2035" mission.
+- **HPLC → Donor Pipeline** (novel, buildable) — BW runs HPLC carrier screening (HbA2 > 3.5–4%
+  = β-thal carrier) **and** a Blood Bridge donor registry as **two separate silos**. People who
+  test HPLC-**negative** (normal Hb) are ideal donor candidates but are **never auto-cross-
+  referenced into the donor pool**. ThalNet bridges the silos: screened non-carriers →
+  consent-gated auto-invite into the Blood Bridge network. Grows the donor base from data BW
+  already collects. (HPLC = carrier detection; does NOT solve transfusion antigen-matching —
+  separate problem, see alloimmunization above.)
 
 ### What Blood Warriors already has → our differentiator
 The live site already has: emergency request listings, blood-stock search, donor
@@ -85,9 +116,16 @@ Prediction decides the **order and the message**, never *who is allowed in*. Two
 Thalassemia is a **lifelong** management condition (500–700 transfusions/lifetime); it is
 **not** "beaten" by donation count. **No cure progress bars, no gamifying a child's illness.**
 Patient-facing view = honest operational transparency only ("3 donors contacted, 1
-confirmed; next transfusion due in 4 days"). Phenotype/HLA compatibility (Kell/Duffy/Kidd)
-is medically real but needs hospital EMR data that has **no open API in India** — so it is a
-**scale-path talking point**, not something we build. We match on ABO+Rh + geo + ML.
+confirmed; next transfusion due in 4 days").
+
+**Alloimmunization-aware (shows medical depth without faking data):** multi-transfused
+patients build alloantibodies against minor antigens — after 200+ transfusions, finding
+compatible blood can need screening 20–30 donors, and it *compounds* over time. Real matching
+therefore needs **extended antigen matching (Kell / Duffy / Kidd / MNS)** beyond ABO+Rh, plus
+phenotype (same-ethnicity) matching. Hospital EMR antigen data has **no open API in India**, so
+we **design the data model to carry these antigen fields and rank on them**, running on
+**synthetic antigen values for the demo**. Live matching uses ABO+Rh + geo + ML; the antigen
+layer is real in schema + ranking logic = "scales the day EMR data exists," not vaporware.
 
 ### Design principle
 > Build the **full platform thin**, then make the **AI core deep**. Serverless-first so
@@ -146,8 +184,13 @@ is medically real but needs hospital EMR data that has **no open API in India** 
   aggregations, triggers the Step Functions outreach. *interface:* REST/JSON. *depends on:*
   DynamoDB, Bedrock, Step Functions. *Runs on Lambda via Mangum.*
 - **Matching + ML module** — *purpose:* score & rank donors for a request. *interface:*
-  `rank_donors(request) -> [donor_id, score, reasons]`. *depends on:* model artifact in S3,
-  blood-compatibility matrix, haversine geo.
+  `rank_donors(request) -> [donor_id, score, reasons]`. *ranks on 4 factors simultaneously:*
+  **antigen compatibility** (ABO+Rh live; Kell/Duffy/Kidd/MNS synthetic, schema-ready) +
+  current eligibility (90-day window) + responsiveness/churn + geo feasibility. *depends on:*
+  model artifact in S3, blood-compatibility matrix, haversine geo.
+- **HPLC pipeline module** — *purpose:* convert HPLC-negative screened people into donor
+  candidates. *interface:* `ingest_screening(records) -> [new_donor_candidates]` (consent-gated).
+  *depends on:* Users table, consent flags.
 - **Bridge module (Auto-Bridge Builder)** — *purpose:* assemble & maintain the 8→1 bridge.
   *interface:* `build_bridge(patient) -> [donor_ids, coverage_calendar, integrity_score]`,
   `heal_bridge(bridgeId) -> [replacement_donor_ids]`. *logic:* hard filter (blood-compat +
@@ -163,12 +206,17 @@ is medically real but needs hospital EMR data that has **no open API in India** 
 - **Outreach orchestrator (Step Functions)** — *purpose:* the autonomous loop. *interface:*
   started by FastAPI with a `requestId`. *depends on:* Lambdas, EventBridge, SES, SNS.
 - **Data/seed scripts** — *purpose:* clean Dataset.csv → S3 → seed DynamoDB. *interface:* CLI.
+- **Supply Command Center (Layer 1, BUILT)** — `project/` scrapes e-RaktKosh national stock →
+  `data/blood_stock_long.csv`; `optimizer/` forecasts shortage, runs redistribution MILP, emits
+  `data/optimizer/mobilization_plan.csv` + `dashboard.html`. *interface to ThalNet:* the
+  mobilization plan (region, district, blood_group, donor_id, units) is read by Triage as its
+  donor work-queue. *owner:* Vijetha.
 
 ## 6. Data model (DynamoDB, on-demand)
 
 | Table | Key | Notable attributes |
 |-------|-----|--------------------|
-| `Users` | PK `userId` | role, blood_group, gender, lat, lng, donor_type, eligibility_status, next_eligible_date, donations_till_date, calls_to_donations_ratio, **responsiveness_score**, **churn_risk**, consent flags |
+| `Users` | PK `userId` | role, blood_group (ABO+Rh), **antigen_phenotype** {Kell,Duffy,Kidd,MNS — synthetic for demo}, ethnicity, gender, lat, lng, donor_type, eligibility_status, next_eligible_date (90-day rule), donations_till_date, calls_to_donations_ratio, **responsiveness_score**, **churn_risk**, **hplc_status** {neg/carrier/unknown}, consent flags |
 | `Bridges` | PK `bridgeId` | patientId, blood_group, quantity_required, frequency_in_days, expected_next_transfusion_date, **donor_ids[]**, **coverage_calendar**, **integrity_score** (Full/At-risk/Broken) |
 | `Requests` | PK `requestId` | bridgeId/patient, blood_group, needed_by, status (open/matched/fulfilled/escalated) |
 | `Conversations` | PK `userId`, SK `ts` | role (user/assistant), text, lang — **this is the memory** |
@@ -196,10 +244,11 @@ Trained on `Dataset.csv` (7,033 rows) in a SageMaker notebook with pandas + scik
 - **Serving:** model pickled → S3 → loaded once per Lambda cold start (no paid endpoint).
 
 **Final ranking score** for a request =
-`blood_compatible (hard filter) AND eligible_by_date (hard filter)` then weighted sum of
-`responsiveness_score`, `geo_proximity`, `(1 − churn_risk)`, `recency`. Returns ranked donors
-**with human-readable reasons** ("O+ match, 4 km away, responsive profile"). Note: geo is coarse
-(~132 unique points) so it breaks ties more than it dominates.
+`antigen_compatible (ABO+Rh hard filter; extended antigens soft-weighted) AND eligible_by_date
+(90-day hard filter)` then weighted sum of `responsiveness_score`, `geo_proximity`,
+`(1 − churn_risk)`, `recency`. Returns ranked donors **with human-readable reasons** ("O+ + Kell-
+match, 4 km away, eligible, responsive profile"). Note: geo is coarse (~132 unique points) so it
+breaks ties more than it dominates; extended-antigen values are synthetic for the demo.
 
 ## 8. AI agent & "failure learning"
 
@@ -240,6 +289,13 @@ Trained on `Dataset.csv` (7,033 rows) in a SageMaker notebook with pandas + scik
 WAF. Mentioned only as a "how this scales" slide. **Realistic total: < $10** if the
 SageMaker notebook is stopped when not training.
 
+**Budget tactics (keep Bedrock spend near-zero):**
+- **Cache Bedrock responses** (identical prompt → cached reply); don't re-call for repeats.
+- **Haiku for classification** (reply-label interpret, language detect) — cheap, fast.
+- **Reserve a larger model only for free-form interpretation** of genuinely ambiguous replies.
+- **Mock Kinesis / real-time streams** — they burn money fast; simulate events with EventBridge
+  test invokes unless a stream is demo-critical.
+
 **Deliberate deviation from the recommended deck:** the official Recommended Stack (Problem
 Statement pg 7) suggests deploying on **EC2 + CloudWatch**. We instead use **Amplify + Lambda
 (serverless)** — both are authorized services (pg 6). Rationale: serverless idle cost ≈ $0,
@@ -254,20 +310,26 @@ request flow · donor chat w/ memory · ML ranking w/ reasons (responsiveness + 
 autonomous outreach loop (rank→contact→interpret→follow-up→escalate, **rank-don't-filter +
 growth mode**) · outcome logging + learning · consent gate · deployed on AWS.
 
-**Stretch (only if time):** **Carrier Cascade** (prevention) · shortage-forecast tile ·
-"what-if" resilience simulator · honest reliability streaks · real WhatsApp/SMS via a provider ·
-live model retrain button · Cognito auth · richer multilingual set.
+**In (data-model + ranking, synthetic values):** **alloimmunization-aware antigen schema +
+ranking** (Kell/Duffy/Kidd/MNS, synthetic) · **90-day eligibility hard filter** · 4-factor
+matching (antigen + eligibility + responsiveness/churn + geo).
 
-**Out / scale-path-only:** phenotype/HLA compatibility (no hospital EMR API in India) ·
-graph/social-network science · marketplace · donor-lifetime-value · cure progress bars /
-gamifying illness (medically wrong) · payments · full user management · mobile apps.
+**Stretch (only if time):** **HPLC → Donor Pipeline** (silo-bridging auto-invite) · **Carrier
+Cascade** (prevention) · shortage-forecast tile · "what-if" resilience simulator · honest
+reliability streaks · real WhatsApp/SMS via a provider · live model retrain button · Cognito
+auth · richer multilingual set.
+
+**Out / scale-path-only:** real phenotype/HLA from hospital EMR (no open API in India — we
+ship the *schema + logic*, synthetic data) · graph/social-network science · marketplace ·
+donor-lifetime-value · cure progress bars / gamifying illness (medically wrong) · payments ·
+full user management · mobile apps.
 
 ## 12. Mapping to evaluation criteria (5 × 20%)
 
 | Criterion | How ThalNet scores |
 |---|---|
 | Ideation (practicality/scalability) | Serverless, real NGO problem, clear scale path |
-| Innovation (uniqueness) | Autonomous agentic loop + predictive matching the current site lacks |
+| Innovation (uniqueness) | Auto-Bridge Builder, failure-learning loop, alloimmunization-aware ranking, HPLC→donor silo-bridging — none on the current site |
 | Prototype (real, not just UI) | Working FastAPI + DynamoDB + Step Functions, live data |
 | AI Component | Trained ML models **and** Bedrock agent w/ memory + failure learning |
 | End-to-End Execution | Deployed on AWS (Amplify + Lambda), budget-guarded |
@@ -281,12 +343,13 @@ gamifying illness (medically wrong) · payments · full user management · mobil
 
 ## 14. Proposed work split (team of 2)
 
-- **Person A — Swaroop (backend + AI):** FastAPI, Bedrock agent module, Step Functions
-  outreach, DynamoDB wiring.
-- **Person B — teammate (data + ML + deploy):** dataset cleaning + seed scripts, SageMaker
-  model training (Models A & B), AWS account/services setup, Amplify deploy.
-- **Claude (me):** generates React UI, scaffolds FastAPI + Lambda handlers, writes the ML
-  training notebook, Step Functions definition, and all glue code; keeps `PROGRESS.md` updated.
+- **Person A — Swaroop (backend + AI / Layer 2):** FastAPI, Bedrock agent module, Step Functions
+  outreach, DynamoDB wiring, the mobilization-plan → Triage seam.
+- **Person B — Vijetha (data + supply / Layer 1) — DONE:** `project/` e-RaktKosh scraper (real
+  national stock) + `optimizer/` (shortage forecast, redistribution MILP, mobilization plan,
+  dashboard.html). Next: ML models (A & B) + AWS/deploy.
+- **Claude (me):** React UI, FastAPI + Lambda scaffold, ML training notebook, Step Functions
+  definition, the Layer-1→Layer-2 glue, keeps `PROGRESS.md`/`DESIGN.md` reconciled.
 
 ## 15. Rough timeline (mapped to the hackathon schedule)
 

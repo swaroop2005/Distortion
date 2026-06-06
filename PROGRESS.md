@@ -10,10 +10,13 @@ something so we both always know the state of play. Newest entries at the top of
 
 ## Current status
 
-🟢 **Building greenlit — hackathon is LIVE.** Design accepted; the pasted competitive/medical
-critique was checked against `docs/DESIGN.md` and is already covered (no changes needed). Scope
-locked (below). **Blocker to resolve now:** Bedrock Haiku access + AWS budget alarm not yet
-confirmed requested — long pole for the agent spike.
+🟢 **Building LIVE — two halves merged into ONE system.** Vijetha's `optimizer/` + `project/`
+(supply side) merged into branch `scaffold-and-design` alongside ThalNet (donor/coordination
+side). **Direction = 2-layer system:** Layer 1 Supply Command Center (predict shortage + optimize
++ mobilization plan + dashboard, BUILT) → seam (`mobilization_plan.csv`) → Layer 2 ThalNet
+autonomous coordination. **Real national e-RaktKosh data now in repo** (3,863 banks, 44,675 rows)
+→ kills the "tiny dataset" weakness. **Blocker:** Bedrock Haiku access + AWS budget alarm not yet
+confirmed — long pole.
 
 ## Locked scope (this session)
 **Flagship = Auto-Bridge Builder** (8→1 bridge: auto-form + eligibility-stagger + self-heal +
@@ -34,9 +37,9 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
 
 | Person | Area | Currently working on |
 |--------|------|----------------------|
-| **Swaroop** | Backend + AI (FastAPI, Bedrock agent, Step Functions, DynamoDB) | _reviewing scope; AWS/Bedrock status TBD_ |
-| **Teammate** | Data + ML + Deploy (dataset, SageMaker models, AWS setup, Amplify) | _TBD_ |
-| **Claude** | UI generation, scaffolding, glue code, keeps this file updated | scaffold+deps done → ML notebook #4 |
+| **Swaroop** | Layer 2 Backend + AI (FastAPI, Bedrock agent, Step Functions, DynamoDB) | wire mobilization_plan → Triage; AWS/Bedrock status TBD |
+| **Vijetha** | Layer 1 Supply (scraper + optimizer + dashboard) — **DONE** | next: ML models A&B + AWS deploy |
+| **Claude** | UI, scaffolding, glue, keeps DESIGN/PROGRESS reconciled | merged halves; reconciled docs → ML notebook #4 |
 
 > **Env note:** Python 3.9.6 venv at `.venv/` (all deps installed). **node/npm + aws CLI NOT
 > installed** on this machine → frontend + deploy blocked until installed (see daily log for cmds).
@@ -123,6 +126,14 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
 - Reconciled DESIGN.md: corrected BW chatbot description, status → building, added deviation note.
 - Deep BW audit (about/impact/REAN): their data/dashboard is all PREVENTION (carrier screening,
   3445 tests, 7.3% carriers). Donor-ops side = no automation/dashboard/prediction → wide open.
+- **Merged Vijetha's `optimizer/` + `project/` into `scaffold-and-design`** (was a stuck/empty
+  merge w/ MERGE_HEAD; aborted + clean re-merge — disjoint files, no real conflict). Backed up
+  DESIGN.md first; session edits intact.
+- **Unified direction = 2-layer system** (Supply Command Center → seam mobilization_plan →
+  ThalNet coordination). Folded into DESIGN.md §2/§5/§14. Dropped our duplicate "resilience
+  heatmap" (Vijetha's dashboard.html already is it). Real national e-RaktKosh data now available.
+- Folded paste's new medical context into DESIGN.md: alloimmunization-aware antigen ranking
+  (Kell/Duffy/Kidd/MNS, synthetic for demo), HPLC→donor pipeline, 90-day eligibility, budget tactics.
 - Reviewed 12-idea bank vs data reality. Folded winners into DESIGN.md:
   **Auto-Bridge Builder + Self-Healing = flagship** (8→1 bridge automation, eligibility-stagger,
   integrity score); Personal Donation Clock (donor); Fatigue-aware cadence (Model B → action);
