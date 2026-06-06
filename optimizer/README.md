@@ -50,7 +50,21 @@ python -m optimizer.run --horizon-days 14
 python -m optimizer.run --demand-scale 30         # model the real patient load
 python -m optimizer.run --greedy                  # skip the MILP solver
 python -m optimizer.run --allow-substitution      # allow O-/ABO-compatible donors
+
+# Build the visual command-center dashboard (self-contained HTML)
+python -m optimizer.dashboard                     # -> data/optimizer/dashboard.html
 ```
+
+### Dashboard
+
+`python -m optimizer.dashboard` runs the pipeline across three demand scenarios
+(baseline / 10× / 30×) and writes a **single self-contained `dashboard.html`** with
+all data embedded — no server, no build step, no CORS. Open it in any browser, or
+drop it on **S3 / Amplify** for Blood Warriors to host. It shows KPI cards, a
+days-of-supply chart per blood group, an interactive Telangana district map
+(shortfall heat + transfer flows + donor density), the redistribution table, and
+the donor-mobilization plan, with a **scenario selector** to explore baseline vs.
+surge. Uses Chart.js + Leaflet via CDN (internet needed to render).
 
 > The engine runs on the **Python standard library alone**. `pulp` is optional
 > (enables the exact optimizer; without it the greedy fallback is used). `pandas`

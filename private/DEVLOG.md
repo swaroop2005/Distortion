@@ -81,4 +81,11 @@
 - **Outputs:** `data/optimizer/{shortage_report,transfer_plan,mobilization_plan}.csv` + printed command-center summary. All 9 modules import + run clean.
 - **AWS scale-path documented** in README per the new "flag AWS" rule (EventBridge+Lambda scheduled scrape→S3, Athena history, DynamoDB latest plan, Bedrock plain-language briefings, Step Functions+SES/SNS = ThalNet seam, QuickSight/Amplify dashboard).
 
+### Visual dashboard built (2026-06-06)
+- **What:** `optimizer/dashboard.py` generates a single self-contained `data/optimizer/dashboard.html` (36K) with data embedded as JSON — no server/build/CORS. Chart.js + Leaflet via CDN.
+- **Collision check first (user ask):** scanned all `.md` + remote branches. Found new teammate branch `origin/scaffold-and-design` building `backend/` (FastAPI) + `scripts/clean_data.py` + `data/clean.csv`. To avoid collision, kept the dashboard inside `optimizer/` (no top-level `frontend/`/`dashboard/` that could clash with ThalNet's planned React UI).
+- **Design:** branded command center (Blood Warriors navy/red). KPI cards (critical groups, first-shortage days, units to redistribute, donors to mobilize, banks), days-of-supply bar chart per group, interactive Telangana district map (shortfall heat + transfer flow lines + donor density, circle size ∝ demand), redistribution table, mobilization bar chart (ThalNet hand-off). **Scenario selector** (baseline/10×/30×) precomputed + embedded; defaults to 10× so it looks immediately useful while baseline stays honest.
+- **Verified:** generates clean; `__DATA__` replaced; embedded JSON parses for all 3 scenarios; brace/paren/bracket balance OK (no node in env to full-lint). Baseline 0 crit, moderate 1 low/3355 donors, surge 1 crit/4 low/4212 donors.
+- **View:** open the HTML in a browser / IDE live-preview; host on S3/Amplify. Committed to `swaroop/dev`.
+
 <!-- next entries below -->
