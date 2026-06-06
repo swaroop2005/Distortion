@@ -47,6 +47,8 @@ CHAT_INTENT_KEYWORDS = {
     "wellness": [
         "what should i eat", "what to eat", "diet", "food", "stay healthy",
         "feel better", "tips", "lifestyle", "take care", "advice", "healthy",
+        "sad", "stress", "anxious", "lonely", "depress", "overwhelm",
+        "cope", "scared", "worried", "mental health",
         "kya khana", "khana", "aahar", "emcomito", "ela undali",
     ],
 }

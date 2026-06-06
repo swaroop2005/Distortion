@@ -111,6 +111,14 @@ def test_faq_still_routes_to_faq():
     assert res["intent"] == "general_faq"
 
 
+def test_wellness_emotional_distress_reaches_wellness():
+    from backend.app.services import wellness
+    assert wellness.detect_topic("I feel sad and stressed") == "emotional"
+    res = chatbot.handle_chat("I feel sad and stressed", role="patient", user_id=_a_patient_id())
+    assert res["intent"] == "wellness"
+    assert res["grounded_facts"]["suggestions"]
+
+
 if __name__ == "__main__":
     test_personal_eligibility_grounded()
     test_bridge_status_intent()
@@ -125,4 +133,5 @@ if __name__ == "__main__":
     test_wellness_donor_no_iron_caution()
     test_wellness_public_general_only()
     test_faq_still_routes_to_faq()
+    test_wellness_emotional_distress_reaches_wellness()
     print("test_chatbot OK")
