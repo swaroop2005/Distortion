@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import math
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from ..utils.compat import can_donate, normalize_blood_group
@@ -64,13 +64,18 @@ def _new_id() -> str:
 
 
 # ── Blood requests ────────────────────────────────────────────────────────
-def create_request(patient_id, blood_group, city, units_required, need_by) -> dict:
-    """Create a patient's open blood request."""
+def create_request(patient_id: str, blood_group: str, city: str,
+                   units_required: int, need_by: str) -> dict:
+    """Create a patient's open blood request. need_by is an ISO date string."""
     if not get_patient(patient_id):
         raise NotFound(f"patient {patient_id} not found")
     bg = normalize_blood_group(blood_group)
     if not bg:
         raise BadState(f"invalid blood group: {blood_group}")
+    try:
+        date.fromisoformat(str(need_by))
+    except (ValueError, TypeError):
+        raise BadState(f"need_by must be an ISO date (YYYY-MM-DD), got: {need_by!r}")
     rid = _new_id()
     req = {
         "request_id": rid,

@@ -26,7 +26,18 @@ def test_create_request_unknown_patient():
         pass
 
 
+def test_create_request_invalid_need_by():
+    cs._reset()
+    p = _a_patient()
+    try:
+        cs.create_request(p["user_id"], p["blood_group"], "Hyderabad", 1, "tomorrow")
+        assert False, "expected BadState"
+    except cs.BadState:
+        pass
+
+
 if __name__ == "__main__":
     test_create_and_get_request()
     test_create_request_unknown_patient()
+    test_create_request_invalid_need_by()
     print("test_community_store OK")
