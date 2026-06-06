@@ -33,6 +33,58 @@
 
 ---
 
+## Task 0: Make the app boot (supply-router wiring fix) — BLOCKER
+
+The app currently fails to import: `main.py` calls `app.include_router(supply.router)`
+but `backend/app/routers/supply.py` is empty (0 bytes). The real router lives in
+`backend/app/routers/supply_routes.py` (defines `router`). Task 5's endpoint test loads
+`backend.app.main:app`, so the app must boot first.
+
+**Files:**
+- Modify: `backend/app/main.py` (use the real supply router)
+- Delete: `backend/app/routers/supply.py` (empty, misleading)
+
+- [ ] **Step 1: Confirm the app currently fails to import**
+
+Run: `.venv/bin/python -c "from backend.app.main import app"`
+Expected: `AttributeError: module 'backend.app.routers.supply' has no attribute 'router'`
+
+- [ ] **Step 2: Point main.py at the real supply router**
+
+In `backend/app/main.py`, change the router import line
+(`from .routers import admin, donors, patients, supply`) to:
+
+```python
+from .routers import admin, donors, patients, supply_routes
+```
+
+And change `app.include_router(supply.router)` (around line 74) to:
+
+```python
+app.include_router(supply_routes.router)
+```
+
+- [ ] **Step 3: Delete the empty placeholder router**
+
+```bash
+git rm backend/app/routers/supply.py
+```
+
+- [ ] **Step 4: Verify the app boots**
+
+Run: `.venv/bin/python -c "from backend.app.main import app; print('routes', len(app.routes))"`
+Expected: prints a route count (e.g. `routes 30+`), no traceback.
+(An `InconsistentVersionWarning` from scikit-learn is expected and harmless.)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add backend/app/main.py
+git commit -m "fix: wire real supply router so the app boots"
+```
+
+---
+
 ## Task 1: Shared empathy layer (`voice.py`)
 
 **Files:**
