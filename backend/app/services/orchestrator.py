@@ -21,9 +21,9 @@ from datetime import date, datetime
 from typing import Optional
 
 from .bridge import build_bridge, heal_bridge, patient_bridges
-from .compat import can_donate, normalize_blood_group
-from .eligibility import is_eligible
-from .geo import donor_patient_km
+from ..utils.compat import can_donate, normalize_blood_group
+from ..utils.eligibility import is_eligible
+from ..utils.geo import donor_patient_km
 from .matching import rank_donors, rank_for_emergency
 from .outreach import get_llm, log_outcome, failure_summary
 from .store import all_patients, get_donor, get_patient

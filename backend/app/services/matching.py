@@ -16,9 +16,9 @@ from __future__ import annotations
 from datetime import date
 from typing import Optional
 
-from .compat import can_donate, normalize_blood_group
-from .eligibility import days_until_eligible, is_eligible
-from .geo import donor_patient_km
+from ..utils.compat import can_donate, normalize_blood_group
+from ..utils.eligibility import days_until_eligible, is_eligible
+from ..utils.geo import donor_patient_km
 from .store import all_donors, get_patient
 
 # Weights (sum to ~1.0 for interpretability)

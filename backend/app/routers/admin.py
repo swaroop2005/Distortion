@@ -6,10 +6,10 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from ..bridge import all_bridges, bridge_health_summary, get_bridge, heal_bridge
-from ..compat import normalize_blood_group
-from ..eligibility import is_eligible
-from ..store import all_donors, all_patients, get_donor, get_patient
+from ..services.bridge import all_bridges, bridge_health_summary, get_bridge, heal_bridge
+from ..utils.compat import normalize_blood_group
+from ..utils.eligibility import is_eligible
+from ..services.store import all_donors, all_patients, get_donor, get_patient
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 

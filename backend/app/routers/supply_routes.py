@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Query
 
-from ..supply import (
+from ..services.supply import (
     mobilization_queue,
     nearby_compatible_banks,
     patient_map_data,

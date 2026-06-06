@@ -17,8 +17,8 @@ import random
 from datetime import date, datetime
 from typing import Optional
 
-from .compat import normalize_blood_group
-from .eligibility import days_until_eligible
+from ..utils.compat import normalize_blood_group
+from ..utils.eligibility import days_until_eligible
 
 LLM_BACKEND = os.environ.get("THALNET_LLM_BACKEND", "mock")
 

@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Optional
 
-from .eligibility import days_until_eligible, is_eligible
+from ..utils.eligibility import days_until_eligible, is_eligible
 from .matching import rank_donors
 from .store import get_donor, get_patient
 

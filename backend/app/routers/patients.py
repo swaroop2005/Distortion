@@ -7,8 +7,8 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from ..bridge import build_bridge, get_bridge, heal_bridge, patient_bridges
-from ..store import get_patient
+from ..services.bridge import build_bridge, get_bridge, heal_bridge, patient_bridges
+from ..services.store import get_patient
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 

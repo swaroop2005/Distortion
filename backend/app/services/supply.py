@@ -19,7 +19,7 @@ import functools
 import os
 from typing import Optional
 
-HERE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+HERE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 STOCK_CSV = os.path.join(HERE, "data", "blood_stock_long.csv")
 BANKS_CSV = os.path.join(HERE, "data", "blood_banks.csv")
 MOBILIZATION_CSV = os.path.join(HERE, "data", "optimizer", "mobilization_plan.csv")
@@ -87,7 +87,7 @@ def nearby_compatible_banks(
 
     Returns banks sorted by distance, with stock counts per compatible group.
     """
-    from .compat import normalize_blood_group
+    from ..utils.compat import normalize_blood_group
     p_norm = normalize_blood_group(patient_group)
     if not p_norm:
         return []
@@ -191,8 +191,8 @@ def patient_map_data(
 ) -> dict:
     """All data needed for the patient map view."""
     from .store import donors_df, patients_df
-    from .compat import normalize_blood_group, compatible_donors_mask
-    from .eligibility import is_eligible
+    from ..utils.compat import normalize_blood_group, compatible_donors_mask
+    from ..utils.eligibility import is_eligible
 
     p_norm = normalize_blood_group(patient_group)
     donors = donors_df()

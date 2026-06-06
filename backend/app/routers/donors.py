@@ -6,10 +6,10 @@ from datetime import date
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from ..compat import normalize_blood_group
-from ..eligibility import days_until_eligible, is_eligible, next_eligible_date
-from ..matching import rank_donors, rank_for_emergency
-from ..store import get_donor
+from ..utils.compat import normalize_blood_group
+from ..utils.eligibility import days_until_eligible, is_eligible, next_eligible_date
+from ..services.matching import rank_donors, rank_for_emergency
+from ..services.store import get_donor
 
 router = APIRouter(prefix="/donors", tags=["donors"])
 

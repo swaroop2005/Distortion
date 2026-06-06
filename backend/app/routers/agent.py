@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from ..orchestrator import (
+from ..services.orchestrator import (
     all_requests,
     get_events,
     get_request,
@@ -12,7 +12,7 @@ from ..orchestrator import (
     handle_new_donor,
     handle_transfusion_due,
 )
-from ..outreach import failure_summary, get_outcomes
+from ..services.outreach import failure_summary, get_outcomes
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 

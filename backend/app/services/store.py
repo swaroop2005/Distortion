@@ -7,7 +7,7 @@ module (matching, bridge, routers) reads one consistent view.
 Swap-out plan: the public functions here (get_patient, all_donors, ...) are the
 seam. In Phase 5 the bodies move to DynamoDB; callers don't change.
 
-Run as a smoke test:  .venv/bin/python -m backend.app.store
+Run as a smoke test:  .venv/bin/python -m backend.app.services.store
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from typing import Optional
 import joblib
 import pandas as pd
 
-HERE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+HERE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 CLEAN = os.path.join(HERE, "data", "clean.csv")
 MODEL_DIR = os.path.join(HERE, "models")
 
