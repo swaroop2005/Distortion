@@ -62,9 +62,13 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
 - [ ] Demo dry-run + submit
 
 ### 🏗️ In progress
-- [ ] #8 bridge.py predictive bridge-break alarm + no-show buffer — _Claude (alarm logic done, no-show buffer next)_
+- [ ] React scaffold + role-routed views (patient/donor/admin) — via Claude Design
 
 ### ✅ Done (this session, cont.)
+- [x] 2026-06-06 — **Autonomous orchestrator** `backend/app/orchestrator.py` — 3-agent loop: triage→outreach→escalate→learn. Entry points: handle_transfusion_due (full cycle), handle_new_donor (auto-map to bridges), handle_emergency. Event log + request tracking — _Claude_
+- [x] 2026-06-06 — **Outreach agent** `backend/app/outreach.py` — MockLLM + BedrockLLM adapters. Empathetic impact messages, thank-you with stats, clock nudge, reply interpretation (EN/HI/TE), failure learning log — _Claude_
+- [x] 2026-06-06 — **Supply integration** `backend/app/supply.py` — reads optimizer blood_stock (44,675 rows) + blood_banks (3,863) + mobilization_plan. Patient map data: nearby compatible banks, regional supply, donor counts — _Claude_
+- [x] 2026-06-06 — **Agent + supply routers** — 12 new endpoints (agent/*, supply/*). Total API: 31 endpoints, all tested — _Claude_
 - [x] 2026-06-06 — #5 FastAPI routers — `patients.py` (list/detail/build-bridge/heal), `donors.py` (list/detail/clock/emergency-rank/register), `admin.py` (dashboard/churn-alerts/bridges). All 11 endpoints smoke-tested — _Claude_
 - [x] 2026-06-06 — #7 `backend/app/matching.py` — 4-factor ranking (blood compat + eligibility + ML + geo), emergency mode, human-readable reasons. Smoke-tested on real data — _Claude_
 - [x] 2026-06-06 — #8 `backend/app/bridge.py` — Auto-Bridge Builder (8→1), self-heal, integrity score (Full/At-risk/Broken), predictive bridge-break alarm, coverage calendar. Smoke-tested — _Claude_
@@ -140,6 +144,10 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
 
 ## Daily log (newest first)
 ### 2026-06-06
+- **Built autonomous 3-agent orchestrator** — full triage→outreach→escalate→learn cycle. Handles: transfusion due (auto-build bridge + contact donors), new donor registration (auto-find compatible patients + welcome), emergency (fast rank + outreach). Event log + failure learning feedback loop.
+- **Built outreach agent** — dual adapter (MockLLM for $0 dev, BedrockLLM for prod). Composes empathetic messages with donor impact stats, interprets free-text replies in EN/HI/TE, sends thank-you with leaderboard link + next eligibility, proactive clock nudge. Failure learning: tracks accept rate + decline reasons → feeds back into agent prompts.
+- **Built supply integration** — bridges Layer 1 optimizer into Layer 2. Reads real e-RaktKosh data (44,675 stock rows, 3,863 banks). Patient map: 96 compatible banks within 50km of Hyderabad for O+, 8,736 units in Telangana. Mobilization queue reads the seam CSV.
+- **31 total API endpoints** — all tested. New: agent/* (transfusion-due, new-donor, emergency, events, learning, requests, outcomes) + supply/* (banks, regional, patient-map, mobilization).
 - **Built FastAPI routers** — 3 router files (patients/donors/admin), 11 endpoints total. All pass integration test via TestClient. Includes: bridge build+heal, donation clock, emergency ranking, donor registration (dynamic pool growth), admin dashboard aggregation, churn alerts with fatigue-aware cadence actions (contact-now/wait/appreciate/DND).
 - **Built matching.py** — 4-factor donor ranking engine (blood compat hard filter + 90-day eligibility hard filter + ML scores + geo proximity). Emergency mode for ad-hoc requests. Human-readable reasons per donor.
 - **Built bridge.py** — Auto-Bridge Builder flagship. 8→1 bridge formation with coverage calendar, integrity scoring (Full/At-risk/Broken), self-heal (auto-replace churned donors), predictive bridge-break alarm (flags when ≥2 donors show high churn), no-show risk detection.
