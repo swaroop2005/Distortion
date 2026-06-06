@@ -27,6 +27,9 @@ backend/app/bridge.py       Auto-Bridge 8→1, self-heal, integrity, alarms
 backend/app/supply.py       L1→L2 bridge (blood_stock+banks+mobilization seam)
 backend/app/outreach.py     MockLLM+BedrockLLM, empathetic msgs, reply interpret(EN/HI/TE), failure learning
 backend/app/orchestrator.py 3-agent loop: triage→outreach→escalate→learn
+backend/app/services/chatbot.py   intent-router chatbot (5 grounded handlers, EN/HI/TE, read-only)
+backend/app/services/voice.py     shared empathy layer (tone guide + exemplars)
+backend/app/services/knowledge.py curated cite-able FAQ
 backend/app/routers/        patients,donors,admin,agent,supply_routes (32 endpoints)
 models/*.pkl                churn(0.968ROC) + responsiveness(0.865proxy)
 data/clean.csv              7033rows, Hyderabad, 132 geo pts
@@ -47,7 +50,7 @@ optimizer/,project/         L1 BUILT — DON'T MODIFY
 ML models, store.py, compat, eligibility, geo, matching, bridge, supply integration, outreach agent (mock+bedrock), orchestrator (3-agent loop), 32 API endpoints
 
 ## Next
-- [ ] Chatbot endpoint (multilingual, context-aware, on every page)
+- [x] Chatbot endpoint (multilingual, context-aware) — POST /chat, intent-router + grounded handlers
 - [ ] React scaffold + role-routed views (via Claude Design)
 - [ ] DynamoDB swap (store.py internals)
 - [ ] AWS deploy (Amplify + Lambda)
