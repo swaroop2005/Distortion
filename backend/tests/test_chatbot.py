@@ -71,6 +71,15 @@ def test_language_detection():
     assert res["intent"] == "personal_eligibility"
 
 
+def test_blood_group_extraction_ab():
+    from backend.app.services.chatbot import _extract_blood_group
+    from backend.app.utils.compat import normalize_blood_group
+    # AB+/AB- must not be mis-extracted as B+/B-
+    assert _extract_blood_group("is AB+ available in Hyderabad?") == normalize_blood_group("AB+")
+    assert _extract_blood_group("need AB- units") == normalize_blood_group("AB-")
+    assert _extract_blood_group("is O+ available") == normalize_blood_group("O+")
+
+
 if __name__ == "__main__":
     test_personal_eligibility_grounded()
     test_bridge_status_intent()
@@ -80,4 +89,5 @@ if __name__ == "__main__":
     test_role_gating_no_leak()
     test_unknown_user_no_fabrication()
     test_language_detection()
+    test_blood_group_extraction_ab()
     print("test_chatbot OK")

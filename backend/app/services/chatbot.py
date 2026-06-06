@@ -11,6 +11,7 @@ Run as a smoke test:  .venv/bin/python -m backend.tests.test_chatbot
 """
 from __future__ import annotations
 
+import math
 from typing import Optional
 
 from .store import get_donor, get_patient
@@ -20,6 +21,14 @@ from ..utils.compat import normalize_blood_group
 from . import knowledge
 from . import supply_store_shim as _stock
 from .outreach import get_llm
+
+
+def _valid_coord(v) -> bool:
+    """True only for a real, finite coordinate (rejects None and pandas NaN)."""
+    try:
+        return v is not None and not math.isnan(float(v))
+    except (TypeError, ValueError):
+        return False
 
 
 # ── Handlers: each returns (facts: dict, sources: list[str]) ─────────────
@@ -48,7 +57,7 @@ def _bridge_status(role: str, user_id: Optional[str], message: str) -> tuple[dic
     bridges = patient_bridges(user_id)
     summary = [
         {"integrity": b.get("integrity", "Unknown"),
-         "donors": len(b.get("donors", []))}
+         "donors": b.get("donor_count", 0)}
         for b in bridges
     ]
     return {"bridges": summary}, ["Dataset.csv", "bridge engine"]
@@ -62,10 +71,11 @@ def _stock_lookup(role: str, user_id: Optional[str], message: str) -> tuple[dict
         rec = (get_donor(user_id) or get_patient(user_id)) if user_id else None
         if not rec:
             return {"note": "need_location", "blood_group": group}, []
+        lat, lon = rec.get("latitude"), rec.get("longitude")
         banks = _stock.banks_with_stock(
             blood_group=group,
-            lat=float(rec.get("latitude")) if rec.get("latitude") is not None else None,
-            lon=float(rec.get("longitude")) if rec.get("longitude") is not None else None,
+            lat=float(lat) if _valid_coord(lat) else None,
+            lon=float(lon) if _valid_coord(lon) else None,
             limit=5,
         )
         district = "your area"
@@ -107,7 +117,8 @@ _BG_TOKENS = {
 
 def _extract_blood_group(message: str) -> Optional[str]:
     t = message.lower().replace(" ", "")
-    for token, canon in _BG_TOKENS.items():
+    # Check longer tokens first so "ab+"/"ab-" win over "b+"/"b-".
+    for token, canon in sorted(_BG_TOKENS.items(), key=lambda kv: -len(kv[0])):
         if token in t:
             return normalize_blood_group(canon)
     return None
@@ -135,6 +146,10 @@ def handle_chat(message: str, role: str = "public",
     intent = llm.classify_intent(message)["intent"]
     handler = HANDLERS.get(intent, _fallback)
     facts, sources = handler(role, user_id, message)
+    # A general_faq classification with no matching entry is really a fallback.
+    if intent == "general_faq" and "answer" not in facts:
+        intent = "fallback"
+        facts, sources = {"note": "fallback"}, []
     reply = llm.compose_chat_reply(facts, {"role": role}, lang)
     return {
         "reply": reply,
