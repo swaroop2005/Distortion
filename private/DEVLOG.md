@@ -88,4 +88,28 @@
 - **Verified:** generates clean; `__DATA__` replaced; embedded JSON parses for all 3 scenarios; brace/paren/bracket balance OK (no node in env to full-lint). Baseline 0 crit, moderate 1 low/3355 donors, surge 1 crit/4 low/4212 donors.
 - **View:** open the HTML in a browser / IDE live-preview; host on S3/Amplify. Committed to `swaroop/dev`.
 
+### Bank-level optimizer + both CSVs (2026-06-06)
+- **Why:** user noted `blood_banks.csv` was unused and `blood_stock_long.csv` was only used aggregated to district. Reworked the optimizer to reason about **individual banks**.
+- **New `banks.py`:** joins `blood_banks.csv` (registry: name, address, district, type, total capacity, contacts, online) with per-bank red-cell stock from `blood_stock_long.csv` → bank nodes with coords (Telangana centroids).
+- **Rewrote `redistribution.py` to bank→bank**, two modes (user chose **both**):
+  - `demand` (Telangana): surplus banks ship to the hub (largest) bank of each deficit district; residual → mobilization.
+  - `rebalance` (national): bring every bank to `--safety-stock` per group; below-safety banks pull from nearby surplus; leftovers → `under_safety.csv`.
+  - Generic transshipment: PuLP MILP for small instances, greedy fallback (and forced greedy when source×sink pairs > 4000 to keep national fast).
+  - Every transfer now carries from/to **bank name, district, type, capacity, distance_km** (user asked for these, like the map).
+- **Wired:** `config` (mode, safety_stock), `run` (`--mode`, `--safety-stock`), `report` (bank-level transfer cols + under_safety.csv), `geo.bank_distance`. `dashboard.py` updated to render bank-level transfers (name/district/type/capacity) and use the new API.
+- **Smoke tests:** demand@scale10 → 558 bank→bank moves (real names: Apollo, Indian Red Cross…), 3,355 donors. rebalance national → 7,183 moves/27,830 units; 5,957 bank×group still below safety = honest finding (national safety stock > available surplus). Dashboard regenerated + JSON/JS validated.
+- **Known modeling note:** demand-mode funnels most transfers to Apollo (Hyderabad) because Hyderabad dominates both demand and is its district's largest hub bank. Acceptable for demo; could spread across multiple receiving banks later.
+
+### Bank reserve floor — never drain a bank (2026-06-06)
+- **Why (user):** a source bank must keep enough for its own patients; don't empty any single bank to help another.
+- **Change:** added `Settings.min_reserve` (default 3) + `--min-reserve`. Demand-mode source cap = `min(district-surplus share, stock − min_reserve)` so a bank never gives below its floor even when its district has no local demand (previously ratio=1 could drain a bank to 0). Rebalance-mode source floor = `max(safety_stock, min_reserve)`.
+- **Verified invariant:** across reserve=0/3/10 at demand-scale 30, **0 source banks left below reserve**; units moved scale down sensibly (4357 → 2877 → 1413) as reserve rises. Confirms banks retain their reserve and the knob behaves monotonically.
+- **Side effect (correct):** with a reserve, less surplus is available → more residual demand → more donor mobilization. Conservative + honest.
+
+### Dashboard: added India national scope (2026-06-06)
+- **Why (user):** "I still only see it by Telangana." The scraped supply is national but the dashboard only showed Telangana.
+- **Honest constraint surfaced:** demand data (`Dataset.csv`) is ~95% Telangana, and we only have district centroids for TG. So national can only honestly show **supply + rebalance**, not demand-driven shortages. User agreed: add an India scope (supply + rebalance), keep TG for demand. National marker = size by units in stock (their pick).
+- **Changes:** added `STATE_CENTROIDS` (35 states) to `geo.py`; added `from_state`/`to_state` to transfer records; rewrote `dashboard.py` with a **scope toggle** (India / Telangana) embedding both datasets. India view = national KPIs, supply-by-group chart, state-level Leaflet map (markers ∝ units, inter-state rebalance flow lines), top rebalance transfers (bank names + states), top states by units. Telangana view unchanged (demand scenarios).
+- **Verified:** India = 35 states, 3,670 red-cell banks, 225,386 units, 7,183 rebalance transfers, 5,957 bank×group below safety; top state UP (35,262 u). JS balanced; html 53 KB. Served live on localhost:8765 for the user to view.
+
 <!-- next entries below -->

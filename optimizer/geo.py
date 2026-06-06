@@ -51,6 +51,46 @@ TELANGANA_CENTROIDS: dict[str, tuple[float, float]] = {
 }
 
 
+# Approximate centroids (lat, lng) for all states/UTs, for the national map view.
+STATE_CENTROIDS: dict[str, tuple[float, float]] = {
+    "Andaman And Nicobar Islands": (11.74, 92.66),
+    "Andhra Pradesh": (15.91, 79.74),
+    "Arunachal Pradesh": (28.22, 94.73),
+    "Assam": (26.20, 92.94),
+    "Bihar": (25.10, 85.31),
+    "Chandigarh": (30.73, 76.78),
+    "Chhattisgarh": (21.28, 81.87),
+    "Dadra And Nagar Haveli And Daman And Diu": (20.40, 72.97),
+    "Delhi": (28.65, 77.19),
+    "Goa": (15.30, 74.12),
+    "Gujarat": (22.26, 71.19),
+    "Haryana": (29.06, 76.09),
+    "Himachal Pradesh": (31.10, 77.17),
+    "Jammu And Kashmir": (33.78, 76.58),
+    "Jharkhand": (23.61, 85.28),
+    "Karnataka": (15.32, 75.71),
+    "Kerala": (10.85, 76.27),
+    "Ladakh": (34.21, 77.61),
+    "Madhya Pradesh": (23.47, 77.95),
+    "Maharashtra": (19.66, 75.30),
+    "Manipur": (24.66, 93.91),
+    "Meghalaya": (25.47, 91.37),
+    "Mizoram": (23.16, 92.94),
+    "Nagaland": (26.16, 94.56),
+    "Odisha": (20.95, 85.10),
+    "Puducherry": (11.94, 79.81),
+    "Punjab": (31.15, 75.34),
+    "Rajasthan": (26.57, 73.84),
+    "Sikkim": (27.53, 88.51),
+    "Tamil Nadu": (11.13, 78.66),
+    "Telangana": (17.91, 79.21),
+    "Tripura": (23.74, 91.75),
+    "Uttar Pradesh": (26.85, 80.95),
+    "Uttarakhand": (30.07, 79.11),
+    "West Bengal": (22.99, 87.86),
+}
+
+
 def haversine_km(a: tuple[float, float], b: tuple[float, float]) -> float:
     """Great-circle distance between two (lat, lng) points, in kilometres."""
     lat1, lon1 = map(math.radians, a)
@@ -73,6 +113,25 @@ def district_distance(d1: str, d2: str) -> float:
         return round(haversine_km(c1, c2), 1)
     # one or both unknown — both are within the same optimized state here
     return SAME_STATE
+
+
+def bank_distance(b1: dict, b2: dict) -> float:
+    """Distance between two bank nodes.
+
+    Uses centroid haversine when both have coordinates; otherwise a tiered proxy
+    on district/state (same district = 0, same state = SAME_STATE, else CROSS_STATE).
+    """
+    if b1["id"] == b2["id"]:
+        return SAME_DISTRICT
+    if b1.get("lat") is not None and b2.get("lat") is not None:
+        d = haversine_km((b1["lat"], b1["lng"]), (b2["lat"], b2["lng"]))
+        # banks in the same district share a centroid -> nudge off zero
+        return round(d, 1) if d > 0 else 5.0
+    if b1["district"] and b1["district"] == b2["district"]:
+        return 5.0
+    if b1["state"] and b1["state"] == b2["state"]:
+        return SAME_STATE
+    return CROSS_STATE
 
 
 def point_distance_km(lat: float, lng: float, district: str) -> float:
