@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { getRegionalSupply, getMobilization, getChurnAlerts, getUrgentAlerts } from '../../services/api';
+import { getSupplyOverview, getChurnAlerts, getUrgentAlerts } from '../../services/api';
 import { LoadingState, ErrorState } from './AdminDashboard';
 
 export default function SupplyPage() {
-  const [regional, setRegional] = useState(null);
-  const [mobilization, setMobilization] = useState(null);
+  const [supply, setSupply] = useState(null);
   const [churn, setChurn] = useState(null);
   const [urgent, setUrgent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -13,14 +12,12 @@ export default function SupplyPage() {
 
   useEffect(() => {
     Promise.all([
-      getRegionalSupply().catch(() => null),
-      getMobilization().catch(() => null),
+      getSupplyOverview().catch(() => null),
       getChurnAlerts().catch(() => null),
       getUrgentAlerts().catch(() => null),
     ])
-      .then(([r, m, c, u]) => {
-        setRegional(r);
-        setMobilization(m);
+      .then(([s, c, u]) => {
+        setSupply(s);
         setChurn(c);
         setUrgent(u);
       })
@@ -35,7 +32,7 @@ export default function SupplyPage() {
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-black text-gray-900 tracking-tight">Supply & Alerts</h1>
-        <p className="text-sm text-gray-500">Regional blood stock, mobilization plan, and risk alerts</p>
+        <p className="text-sm text-gray-500">National blood stock, shortage forecast, and risk alerts</p>
       </div>
 
       <div className="flex gap-2">
@@ -52,49 +49,32 @@ export default function SupplyPage() {
         ))}
       </div>
 
-      {tab === 'supply' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Regional Supply */}
-          {regional && (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-              <h3 className="text-sm font-extrabold text-gray-900 mb-4">Regional Supply — {regional.state || 'Telangana'}</h3>
-              {regional.groups ? (
-                <div className="space-y-2">
-                  {Object.entries(regional.groups).map(([group, data]) => (
-                    <div key={group} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                      <span className="font-mono font-bold text-sm text-gray-900">{group}</span>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-gray-700">{typeof data === 'number' ? data : data.units || data.total || '—'}</span>
-                        <span className="text-xs text-gray-400 ml-1">units</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <pre className="text-xs text-gray-600 bg-gray-50 rounded-lg p-3 overflow-auto max-h-64">{JSON.stringify(regional, null, 2)}</pre>
-              )}
+      {tab === 'supply' && supply && (
+        <div className="space-y-6">
+          {/* Recommendation banner */}
+          {supply.recommendation && (
+            <div className={`rounded-2xl p-4 text-sm font-semibold ${
+              supply.action_required ? 'bg-rose-50 border border-rose-200 text-rose-800' : 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+            }`}>
+              {supply.recommendation}
             </div>
           )}
 
-          {/* Mobilization */}
-          {mobilization && (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-              <h3 className="text-sm font-extrabold text-gray-900 mb-4">Mobilization Plan</h3>
-              {mobilization.donors && mobilization.donors.length > 0 ? (
-                <div className="space-y-1 max-h-80 overflow-y-auto">
-                  {mobilization.donors.slice(0, 20).map((d, i) => (
-                    <div key={i} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-gray-50 text-xs">
-                      <span className="font-mono font-bold text-gray-700">{d.user_id || d.donor_id}</span>
-                      <span className="font-mono text-gray-500">{d.blood_group}</span>
-                      <span className={`font-bold ${d.eligible ? 'text-emerald-600' : 'text-gray-400'}`}>
-                        {d.eligible ? 'Eligible' : 'Cooling'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-gray-400">No mobilization data</p>
-              )}
+          {/* National KPIs */}
+          {supply.kpis && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <KPI label="Banks Indexed" value={supply.kpis.total_banks_indexed?.toLocaleString()} />
+              <KPI label="Total Units" value={supply.kpis.total_units_nationwide?.toLocaleString()} />
+              <KPI label="States Covered" value={supply.kpis.states_covered} />
+              <KPI label="To Mobilize" value={supply.kpis.donors_to_mobilize?.toLocaleString()} accent />
+            </div>
+          )}
+
+          {/* Shortage report */}
+          {supply.shortage && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <ShortageCard title="Critical" items={supply.shortage.critical} color="rose" />
+              <ShortageCard title="Low" items={supply.shortage.low} color="amber" />
             </div>
           )}
         </div>
@@ -113,7 +93,7 @@ export default function SupplyPage() {
                 {churn.donors.slice(0, 20).map((d, i) => (
                   <div key={i} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-gray-50 text-xs border-b border-gray-100 last:border-0">
                     <div>
-                      <span className="font-mono font-bold text-gray-700">{d.user_id}</span>
+                      <span className="font-mono font-bold text-gray-700">{d.user_id.slice(0, 12)}...</span>
                       <span className="text-gray-400 ml-2">{d.blood_group}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -146,7 +126,7 @@ export default function SupplyPage() {
                 {urgent.patients.map((p, i) => (
                   <div key={i} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-gray-50 text-xs border-b border-gray-100 last:border-0">
                     <div>
-                      <span className="font-mono font-bold text-gray-700">{p.user_id}</span>
+                      <span className="font-mono font-bold text-gray-700">{p.user_id.slice(0, 12)}...</span>
                       <span className="text-gray-400 ml-2">{p.blood_group}</span>
                     </div>
                     <div className="text-right">
@@ -162,6 +142,39 @@ export default function SupplyPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function KPI({ label, value, accent }) {
+  return (
+    <div className={`bg-white rounded-2xl border border-gray-200 p-4 shadow-sm ${accent ? 'ring-2 ring-rose-100' : ''}`}>
+      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
+      <p className={`text-2xl font-black tabular-nums tracking-tight ${accent ? 'text-rose-600' : 'text-gray-900'}`}>{value ?? '—'}</p>
+    </div>
+  );
+}
+
+function ShortageCard({ title, items, color }) {
+  if (!items || items.length === 0) return null;
+  const bg = color === 'rose' ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200';
+  const text = color === 'rose' ? 'text-rose-800' : 'text-amber-800';
+
+  return (
+    <div className={`rounded-2xl border p-5 ${bg}`}>
+      <h3 className={`text-sm font-extrabold mb-3 ${text}`}>{title} ({items.length})</h3>
+      <div className="space-y-2">
+        {items.map((r, i) => (
+          <div key={i} className="flex items-center justify-between text-xs bg-white/60 rounded-lg p-2">
+            <span className="font-mono font-bold text-gray-800">{r.blood_group}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-gray-600">{Math.round(r.supply_units)} units</span>
+              <span className={`font-bold ${text}`}>{r.days_of_coverage?.toFixed(1)}d coverage</span>
+              <span className="text-gray-500">short {Math.round(r.shortfall_units)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

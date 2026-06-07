@@ -8,8 +8,9 @@ const styles = {
 };
 
 export default function StatusBadge({ status }) {
+  const key = (status || '').toLowerCase().replace('_', '-');
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold capitalize ${styles[key] || 'bg-gray-100 text-gray-600'}`}>
       {status}
     </span>
   );

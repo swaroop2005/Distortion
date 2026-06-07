@@ -36,9 +36,10 @@ export default function BridgesPage() {
   if (loading) return <LoadingState />;
   if (error) return <ErrorState msg={error} />;
 
+  const norm = (s) => (s || '').toLowerCase().replace('_', '-');
   const filtered = bridges.filter(b =>
-    (filter === 'all' || b.integrity === filter) &&
-    (!search || (b.patient_id || b.pid || '').toLowerCase().includes(search.toLowerCase()))
+    (filter === 'all' || norm(b.integrity) === filter) &&
+    (!search || (b.patient_id || '').toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
@@ -85,11 +86,12 @@ export default function BridgesPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.map(b => {
-                const size = b.donors ? b.donors.length : (b.size || 0);
-                const target = b.target_size || b.target || 8;
+                const size = b.donor_count || (b.donors ? b.donors.length : 0);
+                const target = b.target_size || 8;
                 const pct = Math.min(100, (size / target) * 100);
-                const barColor = b.integrity === 'broken' ? 'bg-rose-500' : b.integrity === 'at-risk' ? 'bg-amber-500' : 'bg-emerald-500';
-                const rowBg = b.integrity === 'broken' ? 'bg-rose-50/40' : b.integrity === 'at-risk' ? 'bg-amber-50/40' : '';
+                const integ = norm(b.integrity);
+                const barColor = integ === 'broken' ? 'bg-rose-500' : integ === 'at-risk' ? 'bg-amber-500' : 'bg-emerald-500';
+                const rowBg = integ === 'broken' ? 'bg-rose-50/40' : integ === 'at-risk' ? 'bg-amber-50/40' : '';
 
                 return (
                   <tr key={b.bridge_id || b.pid} className={`${rowBg} hover:bg-gray-50 transition-colors`}>
@@ -111,7 +113,7 @@ export default function BridgesPage() {
                       {b.donors && b.donors.length > 3 && ` +${b.donors.length - 3}`}
                     </td>
                     <td className="px-4 py-3">
-                      {b.integrity !== 'full' && (
+                      {integ !== 'full' && (
                         <button
                           onClick={() => handleHeal(b.bridge_id || b.pid)}
                           disabled={healing === (b.bridge_id || b.pid)}

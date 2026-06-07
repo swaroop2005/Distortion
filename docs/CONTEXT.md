@@ -1,6 +1,6 @@
 # ThalNet — Session Handoff Context
 
-**Last updated:** 2026-06-06 | **Branch:** scaffold-and-design
+**Last updated:** 2026-06-07 | **Branch:** main
 
 ---
 
@@ -54,17 +54,26 @@ Full docs: `backend/API_ROUTES.md`
 ## 4. What's NOT Built Yet
 
 ### Must-build next
-1. **Chatbot endpoint** — `POST /chat` context-aware, multilingual (EN/HI/TE), conversation memory
-2. **Conversation memory** — in-memory store for chat history
-3. **Donor response flow** — `POST /donors/{id}/respond`, `GET /donors/{id}/requests`
-4. **Patient request creation** — `POST /patients/{id}/request`
+1. **Chatbot UI widget** — backend POST /chat exists, api.js `sendChatMessage` ready, need React component
+2. **Resolve merge conflicts** — admin.py <<<<<<< HEAD markers, main.py agent router import
+3. **Frontend build verification** — `npx vite build` to catch any remaining import errors
+4. **Donor response flow** — `POST /donors/{id}/respond`, `GET /donors/{id}/requests`
 5. **Request lifecycle** — mark fulfilled/closed
 
-### Frontend (not started, Vijetha designing in Claude Design)
-- React + Vite scaffold
-- 3 role-routed views: Patient, Donor, Admin
-- Chatbot widget on every page
-- Will receive React exports from Claude Design → wire to API
+### Frontend (BUILT — React 19 + Vite 8 + Tailwind v4)
+- 10 components across 3 role-routed views (Admin/Donor/Patient)
+- Landing page with role selector → role-specific BrowserRouter
+- Admin: Dashboard (KPIs + bridge health), BridgesPage (table + heal), AgentsPage (live events + trigger), SupplyPage (stock + alerts)
+- Donor: lookup + registration form
+- Patient: lookup + Auto-Bridge builder + bridge list
+- api.js: 14 fetch functions, Vite proxy to :8000
+- 6 data-shape bugs found + fixed (case normalization, field name mismatches, division-by-zero)
+- **Missing:** Chatbot widget (api.js ready, no UI component yet)
+
+### Known Issues (as of 2026-06-07)
+- backend/app/routers/admin.py has unresolved merge conflict markers (Swaroop's code)
+- backend/app/main.py missing agent router import (Swaroop's code)
+- Frontend build not yet verified (`npx vite build`)
 
 ### Infrastructure (not started)
 - DynamoDB swap (store.py internals)

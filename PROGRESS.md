@@ -39,7 +39,7 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
 |--------|------|----------------------|
 | **Swaroop** | Layer 2 Backend + AI (FastAPI, Bedrock agent, Step Functions, DynamoDB) | wire mobilization_plan → Triage; AWS/Bedrock status TBD |
 | **Vijetha** | Layer 1 Supply (scraper + optimizer + dashboard) — **DONE** | next: ML models A&B + AWS deploy |
-| **Claude** | UI, scaffolding, glue, keeps DESIGN/PROGRESS reconciled | merged halves; reconciled docs → ML notebook #4 |
+| **Claude** | UI, scaffolding, glue, keeps DESIGN/PROGRESS reconciled | React frontend built + bug-fixed; SupplyPage rewrite done; next: build verify + chatbot widget |
 
 > **Env note:** Python 3.9.6 venv at `.venv/` (all deps installed). **node/npm + aws CLI NOT
 > installed** on this machine → frontend + deploy blocked until installed (see daily log for cmds).
@@ -62,7 +62,8 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
 - [ ] Demo dry-run + submit
 
 ### 🏗️ In progress
-- [ ] React scaffold + role-routed views (patient/donor/admin) — via Claude Design
+- [ ] Frontend bug sweep — SupplyPage.jsx needs rewrite to match api.js (in progress)
+- [ ] Backend merge conflicts — admin.py has <<<<<<< HEAD markers (Swaroop's code, not touching yet)
 
 ### ✅ Done (this session, cont.)
 - [x] 2026-06-06 — **Backend Route Refactoring (Production Grade)** — Reorganized 5 router domains (admin, donors, patients, agent, supply) into RBAC-ready architecture. Fixed path ambiguities, expanded admin.py with full CRUD (donors/patients/bridges), split public portals from management. Created API_ROUTES.md (500-line reference) + REFACTORING_CHANGELOG.md + VERIFICATION_REPORT.md. All 44 routes verified, FastAPI app initializes cleanly. Ready for auth middleware — _Claude_
@@ -146,6 +147,9 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
 ## Daily log (newest first)
 ### 2026-06-07
 - **✅ Donor↔Patient Connection System (Blood Warriors Community Hub flagship, Feature 1) — backend built** — `/community/*` endpoints (requests, requests/{id}, matches, connections, respond, cancel, messages). Writable in-memory `community_store.py` (blood requests / connection handshakes / private messages) behind a DynamoDB-ready function seam. Mutual-accept handshake: patient creates blood request → sees compatible donors (blood-compat + eligibility annotation + distance) → sends connection → donor accepts → private chat opens. Privacy guard enforced in store: messaging only on accepted connections, only the two participants; read history survives cancel. Typed store exceptions mapped to HTTP (404/403/409/400). All 4 smoke tests pass (test_community_store, test_connections_endpoint, test_chatbot, test_chat_endpoint). Next: Community Feed (own spec→plan cycle). — _Claude_
+- **✅ React frontend built + bug-fixed** — Full production React 19 + Vite 8 + Tailwind v4 UI. Role-routed (admin/donor/patient) without auth. 10 components: LandingPage, AdminDashboard, BridgesPage, AgentsPage, SupplyPage, DonorPortal, PatientPortal, Navbar, StatusBadge, api.js (14 API functions). Fixed 6 data-shape bugs: StatusBadge case normalization, bridge_health at_risk/at-risk dual key, division-by-zero guard, donor_count vs size field, case-insensitive integrity colors, dead code removal from api.js. Vite proxy to :8000 backend. Pushed to main. — _Claude_
+- **🔧 SupplyPage rewrite** — Rewrote to use getSupplyOverview + getChurnAlerts + getUrgentAlerts. Tabbed UI (supply/alerts), national KPIs, shortage cards (critical/low), churn risk table, urgent transfusion list. Still needs build verification. — _Claude_
+- **⚠️ Known issues:** Backend admin.py has unresolved merge conflict markers (Swaroop's code). Backend main.py missing agent router import. Not touching teammate's files per agreement. — _Claude_
 - **✅ Wellness suggestions added to chatbot** — new `wellness` intent + `_wellness` handler in `services/chatbot.py`. Curated cited CSV (`data/wellness_suggestions.csv`, 14 rows) covers diet / hydration & daily habits / emotional wellbeing sourced from authoritative orgs (TIF, Cooley's Anemia Foundation, NHS, NHS Give Blood, Blood Warriors) — not Reddit, no model fine-tuning. Patient-vs-donor audience filtering guards the iron-overload trap: patient role gets an iron caution in `grounded_facts.caution`, donor gets `caution: null`. Always-on "not medical advice — check with your hematologist" disclaimer enforced in code. All 6 chatbot smoke tests pass (test_voice, test_knowledge, test_wellness, test_outreach_chat, test_chatbot, test_chat_endpoint). — _Claude_
 - **✅ Website chatbot built** — intent-router + 5 grounded handlers (personal_eligibility, bridge_status, stock_lookup, general_faq, fallback), multilingual EN/HI/TE, mock-first ($0) with Bedrock switchable, shared empathy/voice layer, curated cite-able FAQ (`services/knowledge.py`). Grounded only on Dataset.csv + scraped e-RaktKosh data; read-only; role-gated (no data leaks); no fabricated stats. All 5 chatbot smoke tests pass; `POST /chat` live and returning correct `intent`, `grounded_facts`, and `sources`. Also fixed: app boot wiring (real supply router registered). — _Claude_
 - **Next:** Part B — harden autonomous outreach loop (real-reply endpoint, follow-ups, fatigue cadence, closed learning loop, register agent router). See `docs/superpowers/specs/2026-06-07-chatbot-and-outreach-design.md`. — _Claude_

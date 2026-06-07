@@ -28,8 +28,13 @@ export default function PatientPortal() {
     setBuilding(true);
     try {
       await createBridge(patientId.trim());
-      const p = await getPatient(patientId.trim());
-      setPatient(p);
+      try {
+        const p = await getPatient(patientId.trim());
+        setPatient(p);
+      } catch (_) {
+        // Bridge created but refresh failed — show stale data with success note
+      }
+      setError(null);
     } catch (e) {
       alert(e.message);
     } finally {
@@ -104,7 +109,7 @@ export default function PatientPortal() {
             {patient.bridges && patient.bridges.length > 0 ? (
               <div className="space-y-3">
                 {patient.bridges.map((b, i) => {
-                  const size = b.donors ? b.donors.length : 0;
+                  const size = b.donor_count || (b.donors ? b.donors.length : 0);
                   const target = b.target_size || 8;
                   const pct = Math.min(100, (size / target) * 100);
                   return (
@@ -117,8 +122,8 @@ export default function PatientPortal() {
                         <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full ${
-                              b.integrity === 'broken' ? 'bg-rose-500' :
-                              b.integrity === 'at-risk' ? 'bg-amber-500' : 'bg-emerald-500'
+                              (b.integrity || '').toLowerCase().includes('broken') ? 'bg-rose-500' :
+                              (b.integrity || '').toLowerCase().includes('risk') ? 'bg-amber-500' : 'bg-emerald-500'
                             }`}
                             style={{ width: `${pct}%` }}
                           />

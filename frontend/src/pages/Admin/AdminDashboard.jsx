@@ -43,7 +43,8 @@ function BloodGroupChart({ distribution }) {
 
 function BridgeHealthSummary({ health }) {
   if (!health) return null;
-  const total = (health.full || 0) + (health['at-risk'] || 0) + (health.broken || 0);
+  const atRisk = health.at_risk || health['at-risk'] || 0;
+  const total = (health.full || 0) + atRisk + (health.broken || 0);
   if (total === 0) return null;
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
@@ -51,7 +52,7 @@ function BridgeHealthSummary({ health }) {
       <div className="flex items-center gap-3 mb-4">
         <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden flex">
           {health.full > 0 && <div className="h-full bg-emerald-500" style={{ width: `${(health.full / total) * 100}%` }} />}
-          {health['at-risk'] > 0 && <div className="h-full bg-amber-500" style={{ width: `${(health['at-risk'] / total) * 100}%` }} />}
+          {atRisk > 0 && <div className="h-full bg-amber-500" style={{ width: `${(atRisk / total) * 100}%` }} />}
           {health.broken > 0 && <div className="h-full bg-rose-500" style={{ width: `${(health.broken / total) * 100}%` }} />}
         </div>
       </div>
@@ -61,7 +62,7 @@ function BridgeHealthSummary({ health }) {
           <p className="text-[10px] font-bold text-gray-400 uppercase">Full</p>
         </div>
         <div>
-          <p className="text-2xl font-black text-amber-600 tabular-nums">{health['at-risk'] || 0}</p>
+          <p className="text-2xl font-black text-amber-600 tabular-nums">{atRisk}</p>
           <p className="text-[10px] font-bold text-gray-400 uppercase">At-Risk</p>
         </div>
         <div>
@@ -120,7 +121,7 @@ function DashboardHome() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard label="Total Donors" value={data.total_donors} />
-        <KPICard label="Eligible Now" value={data.eligible_donors} sub={`${Math.round((data.eligible_donors / data.total_donors) * 100)}% of pool`} />
+        <KPICard label="Eligible Now" value={data.eligible_donors} sub={`${data.total_donors ? Math.round((data.eligible_donors / data.total_donors) * 100) : 0}% of pool`} />
         <KPICard label="Patients" value={data.total_patients} />
         <KPICard label="High Churn" value={data.high_churn_count} accent={data.high_churn_count > 0} sub="donors at risk" />
       </div>
