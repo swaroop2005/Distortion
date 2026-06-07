@@ -8,7 +8,7 @@ function Logo() {
         <Icon name="water_drop" size={16} fill color="#fff" />
       </div>
       <span style={{ fontWeight: 800, fontSize: 18, letterSpacing: '-.03em', color: 'var(--ink)' }}>
-        Thal<span style={{ color: 'var(--red-500)' }}>Net</span>
+        Dis<span style={{ color: 'var(--red-500)' }}>tortion</span>
       </span>
     </div>
   );
@@ -71,7 +71,7 @@ function BridgePreview() {
         <Badge tone="green" dot>self-healing</Badge>
       </div>
       <p style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 20 }}>
-        Each patient needs 8–10 compatible donors. ThalNet auto-builds the circle,
+        Each patient needs 8–10 compatible donors. Distortion auto-builds the circle,
         staggers eligibility windows, and heals gaps before they happen.
       </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -121,7 +121,7 @@ export default function LandingPage({ onSelectRole, onSignUp }) {
             </h1>
             <p style={{ fontSize: 18, color: 'var(--ink-soft)', marginTop: 20, lineHeight: 1.55, maxWidth: 520 }}>
               Thalassemia is lifelong — a child may need 500 to 700 transfusions in their life.
-              ThalNet quietly builds and maintains a steady circle of donors around each patient,
+              Distortion quietly builds and maintains a steady circle of donors around each patient,
               so the blood is there when it's needed. No scrambling. No last-minute calls.
             </p>
             <div style={{ display: 'flex', gap: 12, marginTop: 28, flexWrap: 'wrap' }}>
@@ -143,7 +143,7 @@ export default function LandingPage({ onSelectRole, onSignUp }) {
       {/* how it works */}
       <section style={{ maxWidth: 1140, margin: '0 auto', padding: '40px 22px' }}>
         <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto 36px' }}>
-          <Eyebrow style={{ justifyContent: 'center' }}>How ThalNet helps</Eyebrow>
+          <Eyebrow style={{ justifyContent: 'center' }}>How Distortion helps</Eyebrow>
           <h2 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-.03em', marginTop: 12 }}>
             The coordination happens quietly in the background.
           </h2>
@@ -204,7 +204,7 @@ export default function LandingPage({ onSelectRole, onSignUp }) {
               </span>
             </div>
             <p style={{ marginTop: 14, fontSize: 16, lineHeight: 1.55, color: 'rgba(255,255,255,.78)' }}>
-              ThalNet doesn't promise a cure or count your streaks. It just makes sure the next transfusion is covered — and quietly says thank you to the people who make that possible.
+              Distortion doesn't promise a cure or count your streaks. It just makes sure the next transfusion is covered — and quietly says thank you to the people who make that possible.
             </p>
           </div>
           <div style={{ fontSize: 13.5, color: 'rgba(255,255,255,.6)', lineHeight: 1.8 }}>

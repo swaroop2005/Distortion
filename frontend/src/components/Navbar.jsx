@@ -30,7 +30,7 @@ export default function Navbar({ role, onLogout }) {
             <Icon name="water_drop" size={16} fill color="#fff" />
           </div>
           <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-.03em', color: 'var(--ink)' }}>
-            Thal<span style={{ color: 'var(--red-500)' }}>Net</span>
+            Dis<span style={{ color: 'var(--red-500)' }}>tortion</span>
           </span>
         </Link>
 

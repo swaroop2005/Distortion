@@ -862,11 +862,14 @@ export default function SignUpFlow({ onComplete, onBack }) {
         const res = await registerPatient({
           name: formData.name || '',
           phone: formData.phone || '',
+          dob: formData.dob || '2000-01-01',
           blood_group: formData.bloodGroup || '',
-          thal_type: formData.thalType || 'major',
-          language: formData.language || 'English',
+          thalassemia_type: formData.thalType || 'Major',
+          city: formData.city || 'Hyderabad',
+          district: formData.district || 'Hyderabad',
+          language: formData.language || 'en',
         });
-        setFormData(d => ({ ...d, _registeredId: res.patient_id }));
+        setFormData(d => ({ ...d, _registeredId: res.user_id }));
         go(screen + 1);
       } catch (err) {
         setSubmitError(err.message || 'Registration failed. Please try again.');
