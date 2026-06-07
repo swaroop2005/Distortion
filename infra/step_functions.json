@@ -101,7 +101,7 @@
               "Payload": {
                 "path": "/agent/log-outcome",
                 "httpMethod": "POST",
-                "body.$": "States.JsonToString({\"result\": \"accepted\", \"donor\": $})"
+                "result": "accepted"
               }
             },
             "End": true
@@ -114,7 +114,7 @@
               "Payload": {
                 "path": "/agent/log-outcome",
                 "httpMethod": "POST",
-                "body.$": "States.JsonToString({\"result\": \"declined\", \"donor\": $})"
+                "result": "declined"
               }
             },
             "End": true

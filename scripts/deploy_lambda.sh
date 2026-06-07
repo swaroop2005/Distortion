@@ -20,6 +20,8 @@ REGION="${REGION:-us-east-1}"
 RUNTIME="${RUNTIME:-python3.9}"
 TIMEOUT="${TIMEOUT:-30}"
 MEMORY="${MEMORY:-512}"
+ACCOUNT_ID="${ACCOUNT_ID:-174581551371}"
+S3_BUCKET="${S3_BUCKET:-thalnet-lambda-${ACCOUNT_ID}}"
 ZIP_FILE="lambda_package.zip"
 
 # Resolve ROLE_ARN from existing Lambda or fail fast with helpful message
@@ -74,13 +76,25 @@ zip -r -q "/tmp/$ZIP_FILE" .
 cd - >/dev/null
 echo "Zip size: $(du -sh /tmp/$ZIP_FILE | cut -f1)"
 
-# 4. Create or update Lambda
-echo "[4/4] Deploying to Lambda …"
+# 4. Upload to S3 + deploy Lambda
+echo "[4/4] Uploading to S3 + deploying Lambda …"
+
+# Create S3 bucket if needed
+aws s3api head-bucket --bucket "$S3_BUCKET" --region "$REGION" 2>/dev/null || \
+  aws s3api create-bucket --bucket "$S3_BUCKET" --region "$REGION" \
+    $([ "$REGION" != "us-east-1" ] && echo "--create-bucket-configuration LocationConstraint=$REGION") \
+    > /dev/null
+
+aws s3 cp "/tmp/$ZIP_FILE" "s3://$S3_BUCKET/$ZIP_FILE" --region "$REGION"
+echo "Uploaded to s3://$S3_BUCKET/$ZIP_FILE"
+
 EXISTING_FUNC=$(aws lambda get-function \
   --function-name "$FUNCTION_NAME" \
   --region "$REGION" \
   --query 'Configuration.FunctionName' \
   --output text 2>/dev/null || true)
+
+ENV_VARS="Variables={THALNET_LLM_BACKEND=bedrock,THALNET_DB=dynamodb,AWS_REGION=$REGION}"
 
 if [ -z "$EXISTING_FUNC" ]; then
   echo "Creating new function …"
@@ -89,16 +103,17 @@ if [ -z "$EXISTING_FUNC" ]; then
     --runtime "$RUNTIME" \
     --role "$ROLE_ARN" \
     --handler "backend.app.main.handler" \
-    --zip-file "fileb:///tmp/$ZIP_FILE" \
+    --code "S3Bucket=$S3_BUCKET,S3Key=$ZIP_FILE" \
     --timeout "$TIMEOUT" \
     --memory-size "$MEMORY" \
     --region "$REGION" \
-    --environment "Variables={THALNET_LLM_BACKEND=bedrock,THALNET_DB=dynamodb,AWS_REGION_OVERRIDE=$REGION}"
+    --environment "$ENV_VARS"
 else
   echo "Updating existing function …"
   aws lambda update-function-code \
     --function-name "$FUNCTION_NAME" \
-    --zip-file "fileb:///tmp/$ZIP_FILE" \
+    --s3-bucket "$S3_BUCKET" \
+    --s3-key "$ZIP_FILE" \
     --region "$REGION"
 
   aws lambda wait function-updated \
@@ -109,7 +124,7 @@ else
     --function-name "$FUNCTION_NAME" \
     --timeout "$TIMEOUT" \
     --memory-size "$MEMORY" \
-    --environment "Variables={THALNET_LLM_BACKEND=bedrock,THALNET_DB=dynamodb,AWS_REGION_OVERRIDE=$REGION}" \
+    --environment "$ENV_VARS" \
     --region "$REGION"
 fi
 
