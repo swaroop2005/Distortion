@@ -13,6 +13,7 @@ export default defineConfig({
       '/supply': 'http://localhost:8001',
       '/chat': 'http://localhost:8001',
       '/community': 'http://localhost:8001',
+      '/auth': 'http://localhost:8001',
     }
   }
 })

@@ -1,16 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
 import { getAgentEvents, getAgentRequests, getAgentLearning, triggerTransfusion } from '../../services/api';
-import { LoadingState, ErrorState } from './AdminDashboard';
+import { Icon, Card, Btn, Badge, Eyebrow, Spinner, ErrBox } from '../../design';
 
-const PhaseStyle = {
-  triage: 'bg-blue-100 text-blue-800',
-  outreach: 'bg-emerald-100 text-emerald-800',
-  escalate: 'bg-rose-100 text-rose-800',
-  learn: 'bg-purple-100 text-purple-800',
-  bridge_built: 'bg-indigo-100 text-indigo-800',
-  donor_contacted: 'bg-teal-100 text-teal-800',
-  emergency: 'bg-red-100 text-red-800',
+const PHASE_CFG = {
+  triage:          { color: '#1f5fa6', bg: '#e8f1fb' },
+  outreach:        { color: '#1c7a52', bg: '#e2f3ea' },
+  escalate:        { color: '#9e1420', bg: '#fbe3e4' },
+  learn:           { color: '#6b3fa0', bg: '#ede8fb' },
+  bridge_built:    { color: '#1f4d90', bg: '#dce8f8' },
+  donor_contacted: { color: '#1a6b6b', bg: '#d8f0f0' },
+  emergency:       { color: '#9e1420', bg: '#fbe3e4' },
 };
+
+function PhasePill({ type }) {
+  const cfg = PHASE_CFG[type] || { color: '#6b6e76', bg: '#f0f0f3' };
+  return (
+    <span style={{ padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 800, letterSpacing: '.06em', textTransform: 'uppercase', color: cfg.color, background: cfg.bg, flexShrink: 0, whiteSpace: 'nowrap', fontFamily: 'var(--ff-mono)' }}>
+      {type}
+    </span>
+  );
+}
 
 export default function AgentsPage() {
   const [events, setEvents] = useState([]);
@@ -19,15 +28,14 @@ export default function AgentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
-  const [triggerPatientId, setTriggerPatientId] = useState('');
+  const [trigPid, setTrigPid] = useState('');
+  const [triggering, setTriggering] = useState(false);
   const feedRef = useRef(null);
 
   const fetchAll = async () => {
     try {
       const [ev, req, learn] = await Promise.all([
-        getAgentEvents(30),
-        getAgentRequests(),
-        getAgentLearning(),
+        getAgentEvents(30), getAgentRequests(), getAgentLearning(),
       ]);
       setEvents(ev.events || []);
       setRequests(req.requests || []);
@@ -44,137 +52,142 @@ export default function AgentsPage() {
 
   useEffect(() => {
     if (isPaused) return;
-    const interval = setInterval(fetchAll, 5000);
-    return () => clearInterval(interval);
+    const t = setInterval(fetchAll, 5000);
+    return () => clearInterval(t);
   }, [isPaused]);
 
+  useEffect(() => {
+    if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
+  }, [events]);
+
   const handleTrigger = async () => {
-    if (!triggerPatientId.trim()) return;
-    try {
-      await triggerTransfusion(triggerPatientId.trim());
-      setTriggerPatientId('');
-      fetchAll();
-    } catch (e) {
-      alert(e.message);
-    }
+    if (!trigPid.trim()) return;
+    setTriggering(true);
+    try { await triggerTransfusion(trigPid.trim()); setTrigPid(''); fetchAll(); }
+    catch (e) { alert(e.message); }
+    finally { setTriggering(false); }
   };
 
-  if (loading) return <LoadingState />;
-  if (error) return <ErrorState msg={error} />;
+  if (loading) return <div style={{ padding: 48, display: 'flex', justifyContent: 'center' }}><Spinner /></div>;
+  if (error) return <div style={{ padding: 28 }}><ErrBox msg={error} /></div>;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div style={{ padding: '28px 32px', maxWidth: 1100 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Agent Activity</h1>
-          <p className="text-sm text-gray-500">Autonomous triage → outreach → learn loop</p>
+          <Eyebrow style={{ marginBottom: 4 }}>Autonomous Loop</Eyebrow>
+          <h1 style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-.02em', color: 'var(--ink)', margin: 0 }}>Agent Activity</h1>
+          <p style={{ fontSize: 13.5, color: 'var(--muted)', marginTop: 4 }}>Triage → outreach → escalate → learn</p>
         </div>
-        <div className="flex items-center gap-2">
+
+        {/* Trigger */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <input
-            value={triggerPatientId}
-            onChange={e => setTriggerPatientId(e.target.value)}
-            placeholder="Patient ID (e.g. PT-001)"
-            className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 w-48"
+            value={trigPid}
+            onChange={e => setTrigPid(e.target.value)}
+            placeholder="Patient ID (PT-001)"
             onKeyDown={e => e.key === 'Enter' && handleTrigger()}
+            style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid var(--line)', fontSize: 13, fontFamily: 'var(--ff-mono)', fontWeight: 600, outline: 'none', width: 200 }}
           />
-          <button onClick={handleTrigger} className="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold transition-colors">
-            Trigger Cycle
-          </button>
+          <Btn size="sm" icon="play_arrow" onClick={handleTrigger} disabled={triggering || !trigPid.trim()}>
+            {triggering ? 'Running…' : 'Trigger'}
+          </Btn>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Event Feed */}
-        <div className="lg:col-span-2 bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden flex flex-col" style={{ maxHeight: '600px' }}>
-          <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-            <div>
-              <div className="font-bold text-sm text-gray-200 flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full bg-emerald-400 ${!isPaused ? 'animate-pulse' : ''}`} />
-                Live Event Feed
-              </div>
-              <p className="text-xs text-gray-500 mt-0.5">Auto-refreshes every 5s</p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
+        {/* Live event feed */}
+        <Card pad={0} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: 580 }}>
+          {/* Feed header */}
+          <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,.08)', background: '#16171c', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: isPaused ? '#555' : '#22c55e', display: 'block', animation: isPaused ? 'none' : 'pulse-slow 2s infinite' }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#e5e6ea' }}>Live Event Feed</span>
+              <span style={{ fontSize: 11, color: '#555', fontFamily: 'var(--ff-mono)' }}>auto-refreshes 5s</span>
             </div>
-            <button
-              onClick={() => setIsPaused(!isPaused)}
-              className="px-3 py-1.5 rounded-full border border-gray-700 bg-gray-800 text-gray-300 text-xs font-semibold hover:bg-gray-700 transition-colors"
-            >
-              {isPaused ? 'Resume' : 'Pause'}
+            <button onClick={() => setIsPaused(p => !p)} style={{ padding: '4px 12px', borderRadius: 999, border: '1px solid #333', background: '#1e2028', color: '#9a9da4', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              {isPaused ? '▶ Resume' : '⏸ Pause'}
             </button>
           </div>
-          <div ref={feedRef} className="overflow-y-auto flex-1 p-2">
+
+          {/* Events */}
+          <div ref={feedRef} style={{ flex: 1, overflowY: 'auto', background: '#111214', padding: '8px 0' }}>
             {events.length === 0 ? (
-              <p className="text-gray-500 text-sm text-center py-8">No events yet. Trigger a cycle to start.</p>
+              <div style={{ padding: '48px 24px', textAlign: 'center', color: '#555', fontSize: 13 }}>
+                No events yet — trigger a cycle above
+              </div>
             ) : events.map((ev, i) => (
-              <div key={i} className="flex gap-3 p-2 border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
-                <span className="font-mono text-xs text-gray-500 pt-0.5 shrink-0">{ev.ts || ev.timestamp || ''}</span>
-                <span className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-full h-fit shrink-0 tracking-wider ${
-                  PhaseStyle[ev.type] || PhaseStyle[ev.phase] || 'bg-gray-700 text-gray-300'
-                }`}>
-                  {(ev.type || ev.phase || 'event').toUpperCase()}
-                </span>
-                <span className="text-sm text-gray-300 leading-snug">
+              <div key={i} style={{ display: 'flex', gap: 10, padding: '9px 16px', borderBottom: '1px solid rgba(255,255,255,.04)', alignItems: 'flex-start' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,.03)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <span style={{ fontFamily: 'var(--ff-mono)', fontSize: 11, color: '#4a4e5a', paddingTop: 2, flexShrink: 0 }}>{ev.ts || ev.timestamp || ''}</span>
+                <PhasePill type={ev.type || ev.phase || 'event'} />
+                <span style={{ fontSize: 13, color: '#c8cad0', lineHeight: 1.4 }}>
                   {ev.detail || ev.msg || ev.message || JSON.stringify(ev)}
                 </span>
               </div>
             ))}
           </div>
-          <div className="p-3 border-t border-gray-800 flex flex-wrap gap-2 bg-gray-900">
-            {Object.entries(PhaseStyle).slice(0, 4).map(([phase, cls]) => (
-              <span key={phase} className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-full ${cls}`}>
-                {phase.toUpperCase()}
-              </span>
-            ))}
-          </div>
-        </div>
 
-        {/* Requests + Learning sidebar */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
-            <h3 className="text-sm font-extrabold text-gray-900 mb-3">Recent Requests</h3>
+          {/* Legend */}
+          <div style={{ padding: '10px 16px', borderTop: '1px solid rgba(255,255,255,.06)', background: '#16171c', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {['triage', 'outreach', 'escalate', 'learn'].map(p => <PhasePill key={p} type={p} />)}
+          </div>
+        </Card>
+
+        {/* Right sidebar */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Recent requests */}
+          <Card pad={18}>
+            <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--ink)', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>Recent Requests</span>
+              {requests.length > 0 && <Badge tone="blue">{requests.length}</Badge>}
+            </div>
             {requests.length === 0 ? (
-              <p className="text-xs text-gray-400">No requests yet</p>
+              <p style={{ fontSize: 12, color: 'var(--muted)' }}>No requests yet</p>
             ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {requests.slice(0, 10).map((r, i) => (
-                  <div key={i} className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 220, overflowY: 'auto' }}>
+                {requests.slice(0, 12).map((r, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderRadius: 8, background: 'var(--line-soft)' }}>
                     <div>
-                      <span className="text-xs font-bold text-gray-700 font-mono">{r.request_id || r.id}</span>
-                      <span className="text-xs text-gray-400 ml-2">{r.patient_id}</span>
+                      <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--ink)', fontFamily: 'var(--ff-mono)' }}>{(r.request_id || r.id || '').slice(0, 12)}</span>
+                      <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6 }}>{r.patient_id}</span>
                     </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      r.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                      r.status === 'failed' ? 'bg-rose-100 text-rose-700' :
-                      'bg-blue-100 text-blue-700'
-                    }`}>
+                    <Badge tone={r.status === 'completed' ? 'green' : r.status === 'failed' ? 'red' : 'blue'} dot>
                       {r.status || 'active'}
-                    </span>
+                    </Badge>
                   </div>
                 ))}
               </div>
             )}
-          </div>
+          </Card>
 
+          {/* Failure learning */}
           {learning && (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
-              <h3 className="text-sm font-extrabold text-gray-900 mb-3">Failure Learning</h3>
+            <Card pad={18}>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--ink)', marginBottom: 14 }}>
+                Failure Learning
+              </div>
               {learning.patterns && learning.patterns.length > 0 ? (
-                <div className="space-y-2">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {learning.patterns.map((p, i) => (
-                    <div key={i} className="text-xs text-gray-600 bg-gray-50 rounded-lg p-2">
-                      <span className="font-bold text-gray-700">{p.reason || p.label}:</span>{' '}
-                      {p.count || p.frequency} occurrence{(p.count || p.frequency) !== 1 ? 's' : ''}
+                    <div key={i} style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--red-50)', border: '1px solid var(--red-100)' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--red-700)' }}>{p.reason || p.label}</span>
+                      <span style={{ fontSize: 11.5, color: 'var(--muted)', marginLeft: 8 }}>{p.count || p.frequency}×</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-gray-400">No failure patterns yet</p>
+                <p style={{ fontSize: 12, color: 'var(--muted)' }}>No failure patterns yet</p>
               )}
               {learning.total_failures !== undefined && (
-                <p className="text-xs text-gray-500 mt-3 font-mono">
-                  Total failures: {learning.total_failures} | Success rate: {learning.success_rate || 'N/A'}
-                </p>
+                <div style={{ marginTop: 12, fontSize: 11.5, color: 'var(--muted)', fontFamily: 'var(--ff-mono)', padding: '8px 10px', background: 'var(--line-soft)', borderRadius: 8 }}>
+                  {learning.total_failures} failures · {learning.success_rate || 'N/A'} success rate
+                </div>
               )}
-            </div>
+            </Card>
           )}
         </div>
       </div>

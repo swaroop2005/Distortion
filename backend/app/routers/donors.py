@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -99,25 +100,59 @@ def emergency_rank(req: EmergencyRankRequest):
 
 class RegisterDonorRequest(BaseModel):
     """Request to register as a new donor."""
-    blood_group: str
+    phone: str = ""
+    name: str = ""
+    dob: str = ""
     gender: str = "Unknown"
+    blood_group: str = ""
+    weight_kg: Optional[float] = None
+    last_donation: Optional[str] = None
+    donor_type: str = "bridge"  # "bridge" | "emergency" | "both"
+    illness_last_4wk: bool = False
+    on_medication: bool = False
+    ever_deferred: bool = False
+    city: str = ""
+    district: str = ""
+    contact_method: str = "whatsapp"
+    language: str = "en"
+    travel_km: int = 25
     latitude: float = 17.385
     longitude: float = 78.486
+    whatsapp: bool = True
+
+
+# In-memory registered donor profiles (DynamoDB-ready seam)
+_registered_donors: dict = {}  # user_id -> profile
 
 
 @router.post("/register")
 def register_donor(req: RegisterDonorRequest):
     """Register a new donor (dynamic pool growth).
-    
+
     Demo: in-memory only. Production writes to DynamoDB.
     Validates blood group before registration.
     """
-    norm = normalize_blood_group(req.blood_group)
-    if not norm:
+    from .auth import link_phone
+    import uuid
+
+    norm = normalize_blood_group(req.blood_group) if req.blood_group else None
+    if req.blood_group and not norm:
         raise HTTPException(400, f"Unknown blood group: {req.blood_group}")
+
+    donor_id = f"DN-REG-{uuid.uuid4().hex[:6].upper()}"
+    profile = req.dict()
+    profile["user_id"] = donor_id
+    profile["role"] = "Bridge Donor" if req.donor_type in ("bridge", "both") else "Emergency Donor"
+    profile["blood_group"] = norm or req.blood_group
+    _registered_donors[donor_id] = profile
+
+    if req.phone:
+        link_phone(req.phone, donor_id, "donor")
+
     return {
         "status": "registered",
-        "blood_group": norm,
+        "user_id": donor_id,
+        "blood_group": norm or req.blood_group,
         "message": "Welcome to the Blood Bridge network! You are now eligible for matching.",
         "note": "Demo mode — stored in-memory. Production writes to DynamoDB.",
     }

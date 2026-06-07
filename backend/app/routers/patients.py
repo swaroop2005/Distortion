@@ -1,6 +1,7 @@
 """Patient routes — public patient portal, bridge operations, transfusion tracking."""
 from __future__ import annotations
 
+import uuid
 from datetime import date
 from typing import Optional
 
@@ -9,8 +10,51 @@ from pydantic import BaseModel
 
 from ..services.bridge import build_bridge, get_bridge, heal_bridge, patient_bridges
 from ..services.store import get_patient
+from .auth import link_phone
 
 router = APIRouter(prefix="/patients", tags=["patients"])
+
+# In-memory registered patient profiles (DynamoDB-ready seam)
+_registered_patients: dict = {}  # user_id -> profile
+
+
+class RegisterPatientRequest(BaseModel):
+    phone: str
+    name: str
+    dob: str
+    is_for_self: bool = True
+    patient_name: Optional[str] = None
+    patient_dob: Optional[str] = None
+    relationship: Optional[str] = None
+    blood_group: Optional[str] = None
+    thalassemia_type: Optional[str] = None
+    transfusion_frequency: Optional[str] = None
+    last_transfusion: Optional[str] = None
+    city: str = ""
+    district: str = ""
+    hospital: Optional[str] = None
+    emergency_name: str = ""
+    emergency_phone: str = ""
+    emergency_relation: Optional[str] = None
+    language: str = "en"
+    whatsapp: bool = True
+
+
+@router.post("/register")
+def register_patient(req: RegisterPatientRequest):
+    """Register a new patient and link their phone for OTP sign-in."""
+    patient_id = f"PT-REG-{uuid.uuid4().hex[:6].upper()}"
+    profile = req.dict()
+    profile["user_id"] = patient_id
+    profile["role"] = "Patient"
+    _registered_patients[patient_id] = profile
+    link_phone(req.phone, patient_id, "patient")
+    return {
+        "status": "registered",
+        "user_id": patient_id,
+        "message": "Your blood bridge is being built. We'll reach out when donors confirm.",
+        "note": "Demo mode — stored in-memory. Production writes to DynamoDB.",
+    }
 
 
 @router.get("/")

@@ -48,7 +48,7 @@ NOTES:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import admin, agent, chat, connections, donors, patients, supply_routes
+from .routers import admin, agent, auth, chat, connections, donors, patients, supply_routes
 from .store import all_patients
 from .services.bridge import build_bridge
 
@@ -93,8 +93,8 @@ async def seed_bridges() -> None:
 app.include_router(admin.router)
 app.include_router(supply_routes.router)
 
-# Admin management (RBAC-protected)
-app.include_router(admin.router)
+# Auth
+app.include_router(auth.router)
 
 # Public portals
 app.include_router(donors.router)

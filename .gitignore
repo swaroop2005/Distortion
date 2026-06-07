@@ -67,3 +67,11 @@ logs/
 private/SESSION_CONTEXT.md
 
 # NOTE: Dataset.csv and the hackathon PDFs are intentionally committed.
+
+# --- Presentation artifacts ---
+*.pptx
+make_ppt.py
+.~lock.*#
+
+# --- Claude Code internal planning files ---
+docs/superpowers/

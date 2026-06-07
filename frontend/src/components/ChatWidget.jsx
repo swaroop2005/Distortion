@@ -1,39 +1,36 @@
 import { useState, useRef, useEffect } from 'react';
 import { sendChatMessage } from '../services/api';
+import { Icon } from '../design';
 
-// Floating assistant available on every page. Surfaces the grounded chatbot,
-// wellness suggestions, FAQ and personal (eligibility / bridge / stock) answers.
-// role + userId come from App so answers are role-aware and personal.
 export default function ChatWidget({ role = 'public', userId = null }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [messages, setMessages] = useState([
-    {
-      from: 'bot',
-      text: "Hi! I'm the Blood Warriors assistant. Ask me about donating, your eligibility, your bridge, blood availability, or thalassemia wellness tips.",
-    },
+    { from: 'bot', text: "Hi! I'm the Blood Warriors assistant. Ask me about donating, your eligibility, your bridge, blood availability, or thalassemia wellness tips." },
   ]);
   const scrollRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, open]);
 
+  useEffect(() => {
+    if (open && inputRef.current) inputRef.current.focus();
+  }, [open]);
+
   const send = async () => {
     const text = input.trim();
     if (!text || sending) return;
     setInput('');
-    setMessages((m) => [...m, { from: 'user', text }]);
+    setMessages(m => [...m, { from: 'user', text }]);
     setSending(true);
     try {
       const res = await sendChatMessage(text, role, userId);
-      setMessages((m) => [
-        ...m,
-        { from: 'bot', text: res.reply, sources: res.sources, intent: res.intent },
-      ]);
+      setMessages(m => [...m, { from: 'bot', text: res.reply, sources: res.sources, intent: res.intent }]);
     } catch (e) {
-      setMessages((m) => [...m, { from: 'bot', text: `Sorry — ${e.message}`, error: true }]);
+      setMessages(m => [...m, { from: 'bot', text: `Sorry — ${e.message}`, error: true }]);
     } finally {
       setSending(false);
     }
@@ -41,65 +38,96 @@ export default function ChatWidget({ role = 'public', userId = null }) {
 
   return (
     <>
-      {/* Launcher */}
+      {/* FAB launcher */}
       <button
-        onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-5 right-5 z-50 h-14 w-14 rounded-full bg-rose-600 hover:bg-rose-700 text-white shadow-lg flex items-center justify-center text-2xl transition-colors"
+        onClick={() => setOpen(o => !o)}
         aria-label="Open assistant"
+        style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 200,
+          width: 52, height: 52, borderRadius: '50%',
+          background: open ? 'var(--ink)' : 'var(--red-500)',
+          color: '#fff', border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 20px rgba(225,29,42,.35)', transition: 'all .2s',
+        }}
       >
-        {open ? '×' : '💬'}
+        <Icon name={open ? 'close' : 'chat_bubble'} size={22} fill color="#fff" />
       </button>
 
       {/* Panel */}
       {open && (
-        <div className="fixed bottom-24 right-5 z-50 w-[22rem] max-w-[calc(100vw-2.5rem)] h-[28rem] bg-white rounded-2xl border border-gray-200 shadow-2xl flex flex-col overflow-hidden">
-          <div className="px-4 py-3 bg-rose-600 text-white">
-            <p className="text-sm font-extrabold">Blood Warriors Assistant</p>
-            <p className="text-[11px] text-rose-100">
-              {role !== 'public' ? `${role}${userId ? ` · ${userId}` : ''}` : 'general help'}
-            </p>
+        <div style={{
+          position: 'fixed', bottom: 88, right: 24, zIndex: 199,
+          width: 348, maxWidth: 'calc(100vw - 32px)',
+          background: 'var(--surface)', borderRadius: 18,
+          border: '1px solid var(--line)', boxShadow: '0 12px 40px rgba(0,0,0,.16)',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          height: 440,
+        }}>
+          {/* Header */}
+          <div style={{ padding: '14px 18px', background: 'var(--red-500)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,.15)', display: 'grid', placeItems: 'center' }}>
+              <Icon name="water_drop" size={18} fill color="#fff" />
+            </div>
+            <div>
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: '#fff' }}>Blood Warriors Assistant</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.7)', marginTop: 1 }}>
+                {role !== 'public' ? `${role}${userId ? ` · ${userId}` : ''}` : 'general help'}
+              </div>
+            </div>
+            <div style={{ marginLeft: 'auto', width: 7, height: 7, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 6px #4ade80' }} />
           </div>
 
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
+          {/* Messages */}
+          <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '14px 14px', display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--bg)' }}>
             {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm ${
-                    m.from === 'user'
-                      ? 'bg-rose-600 text-white rounded-br-sm'
-                      : m.error
-                      ? 'bg-rose-50 text-rose-700 border border-rose-200 rounded-bl-sm'
-                      : 'bg-white text-gray-800 border border-gray-200 rounded-bl-sm'
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap">{m.text}</p>
+              <div key={i} style={{ display: 'flex', justifyContent: m.from === 'user' ? 'flex-end' : 'flex-start' }}>
+                <div style={{
+                  maxWidth: '85%', padding: '9px 13px', borderRadius: m.from === 'user' ? '14px 14px 3px 14px' : '14px 14px 14px 3px',
+                  fontSize: 13.5, lineHeight: 1.5, whiteSpace: 'pre-wrap',
+                  background: m.from === 'user' ? 'var(--red-500)' : m.error ? 'var(--red-50)' : 'var(--surface)',
+                  color: m.from === 'user' ? '#fff' : m.error ? 'var(--red-700)' : 'var(--ink)',
+                  border: m.from === 'user' ? 'none' : `1px solid ${m.error ? 'var(--red-100)' : 'var(--line)'}`,
+                  boxShadow: 'var(--sh-sm)',
+                }}>
+                  {m.text}
                   {m.sources && m.sources.length > 0 && (
-                    <p className="mt-1 text-[10px] text-gray-400">Source: {m.sources.join(', ')}</p>
+                    <div style={{ marginTop: 6, fontSize: 10.5, color: m.from === 'user' ? 'rgba(255,255,255,.6)' : 'var(--muted)' }}>
+                      Source: {m.sources.join(', ')}
+                    </div>
                   )}
                 </div>
               </div>
             ))}
             {sending && (
-              <div className="flex justify-start">
-                <div className="px-3 py-2 rounded-2xl text-sm bg-white border border-gray-200 text-gray-400">…</div>
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <div style={{ padding: '9px 14px', borderRadius: '14px 14px 14px 3px', background: 'var(--surface)', border: '1px solid var(--line)', fontSize: 18, color: 'var(--muted)' }}>
+                  <span style={{ animation: 'pulse-slow 1s infinite' }}>···</span>
+                </div>
               </div>
             )}
           </div>
 
-          <div className="p-2 border-t border-gray-100 flex gap-2">
+          {/* Input */}
+          <div style={{ padding: '10px 12px', borderTop: '1px solid var(--line)', display: 'flex', gap: 8, background: 'var(--surface)' }}>
             <input
+              ref={inputRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && send()}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && send()}
               placeholder="Ask a question…"
-              className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+              style={{ flex: 1, padding: '9px 14px', borderRadius: 12, border: '1.5px solid var(--line)', fontSize: 13.5, fontFamily: 'inherit', outline: 'none', background: 'var(--bg)' }}
             />
             <button
               onClick={send}
-              disabled={sending}
-              className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-rose-300 text-white text-sm font-bold transition-colors"
+              disabled={sending || !input.trim()}
+              style={{
+                width: 38, height: 38, borderRadius: 10, border: 'none', cursor: sending ? 'wait' : 'pointer',
+                background: input.trim() ? 'var(--red-500)' : 'var(--line)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .15s', flexShrink: 0,
+              }}
             >
-              Send
+              <Icon name="send" size={17} fill color={input.trim() ? '#fff' : 'var(--muted)'} />
             </button>
           </div>
         </div>

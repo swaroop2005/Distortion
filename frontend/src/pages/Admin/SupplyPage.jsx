@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { getSupplyOverview, getChurnAlerts, getUrgentAlerts } from '../../services/api';
-import { LoadingState, ErrorState } from './AdminDashboard';
+import { Icon, Card, Btn, Badge, Eyebrow, Spinner, ErrBox } from '../../design';
+
+const ACTION_CFG = {
+  'do-not-disturb': { tone: 'red',     label: 'DND' },
+  'send-appreciation': { tone: 'blue', label: 'Appreciate' },
+  'wait':              { tone: 'neutral', label: 'Wait' },
+  'contact-now':       { tone: 'green', label: 'Contact now' },
+};
 
 export default function SupplyPage() {
   const [supply, setSupply] = useState(null);
@@ -15,162 +22,170 @@ export default function SupplyPage() {
       getSupplyOverview().catch(() => null),
       getChurnAlerts().catch(() => null),
       getUrgentAlerts().catch(() => null),
-    ])
-      .then(([s, c, u]) => {
-        setSupply(s);
-        setChurn(c);
-        setUrgent(u);
-      })
+    ]).then(([s, c, u]) => { setSupply(s); setChurn(c); setUrgent(u); })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <LoadingState />;
-  if (error) return <ErrorState msg={error} />;
+  if (loading) return <div style={{ padding: 48, display: 'flex', justifyContent: 'center' }}><Spinner /></div>;
+  if (error) return <div style={{ padding: 28 }}><ErrBox msg={error} /></div>;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-black text-gray-900 tracking-tight">Supply & Alerts</h1>
-        <p className="text-sm text-gray-500">National blood stock, shortage forecast, and risk alerts</p>
+    <div style={{ padding: '28px 32px', maxWidth: 1100 }}>
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <Eyebrow style={{ marginBottom: 4 }}>National Supply</Eyebrow>
+        <h1 style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-.02em', color: 'var(--ink)', margin: 0 }}>Supply & Alerts</h1>
+        <p style={{ fontSize: 13.5, color: 'var(--muted)', marginTop: 4 }}>National blood stock, shortage forecast, risk alerts</p>
       </div>
 
-      <div className="flex gap-2">
-        {['supply', 'alerts'].map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-colors ${
-              tab === t ? 'bg-rose-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-            }`}
-          >
-            {t}
+      {/* Tab bar */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '1.5px solid var(--line)', paddingBottom: 0 }}>
+        {[{ k: 'supply', l: 'Supply', icon: 'bloodtype' }, { k: 'alerts', l: 'Alerts', icon: 'notifications' }].map(t => (
+          <button key={t.k} onClick={() => setTab(t.k)} style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '9px 18px', borderRadius: '10px 10px 0 0', fontSize: 13.5, fontWeight: 700, cursor: 'pointer',
+            border: 'none', fontFamily: 'inherit', transition: 'all .15s',
+            background: tab === t.k ? 'var(--surface)' : 'transparent',
+            color: tab === t.k ? 'var(--red-500)' : 'var(--muted)',
+            borderBottom: tab === t.k ? '2px solid var(--red-500)' : '2px solid transparent',
+            marginBottom: -1.5,
+          }}>
+            <Icon name={t.icon} size={16} fill color={tab === t.k ? 'var(--red-500)' : 'var(--muted)'} />
+            {t.l}
           </button>
         ))}
       </div>
 
+      {/* Supply tab */}
       {tab === 'supply' && supply && (
-        <div className="space-y-6">
-          {/* Recommendation banner */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
           {supply.recommendation && (
-            <div className={`rounded-2xl p-4 text-sm font-semibold ${
-              supply.action_required ? 'bg-rose-50 border border-rose-200 text-rose-800' : 'bg-emerald-50 border border-emerald-200 text-emerald-800'
-            }`}>
+            <div style={{
+              padding: '14px 18px', borderRadius: 12, fontSize: 13.5, fontWeight: 600,
+              background: supply.action_required ? 'var(--red-50)' : '#e2f3ea',
+              border: `1px solid ${supply.action_required ? 'var(--red-100)' : '#b3dfc8'}`,
+              color: supply.action_required ? 'var(--red-700)' : '#1c7a52',
+              display: 'flex', gap: 10, alignItems: 'flex-start',
+            }}>
+              <Icon name={supply.action_required ? 'warning' : 'check_circle'} size={18} fill color="currentColor" />
               {supply.recommendation}
             </div>
           )}
 
-          {/* National KPIs */}
+          {/* KPI grid */}
           {supply.kpis && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <KPI label="Banks Indexed" value={supply.kpis.total_banks_indexed?.toLocaleString()} />
-              <KPI label="Total Units" value={supply.kpis.total_units_nationwide?.toLocaleString()} />
-              <KPI label="States Covered" value={supply.kpis.states_covered} />
-              <KPI label="To Mobilize" value={supply.kpis.donors_to_mobilize?.toLocaleString()} accent />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
+              {[
+                { label: 'Banks indexed', value: supply.kpis.total_banks_indexed?.toLocaleString(), accent: false },
+                { label: 'Total units', value: supply.kpis.total_units_nationwide?.toLocaleString(), accent: false },
+                { label: 'States covered', value: supply.kpis.states_covered, accent: false },
+                { label: 'To mobilize', value: supply.kpis.donors_to_mobilize?.toLocaleString(), accent: true },
+              ].map(k => (
+                <Card key={k.label} pad={18} style={{ borderLeft: k.accent ? '3px solid var(--red-500)' : undefined }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.05em', textTransform: 'uppercase', marginBottom: 8 }}>{k.label}</div>
+                  <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: '-.03em', color: k.accent ? 'var(--red-500)' : 'var(--ink)' }}>{k.value ?? '—'}</div>
+                </Card>
+              ))}
             </div>
           )}
 
-          {/* Shortage report */}
+          {/* Shortage cards */}
           {supply.shortage && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <ShortageCard title="Critical" items={supply.shortage.critical} color="rose" />
-              <ShortageCard title="Low" items={supply.shortage.low} color="amber" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <ShortageCard title="Critical shortage" items={supply.shortage.critical} tone="red" />
+              <ShortageCard title="Low supply" items={supply.shortage.low} tone="amber" />
             </div>
           )}
         </div>
       )}
 
+      {/* Alerts tab */}
       {tab === 'alerts' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Churn Alerts */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-sm font-extrabold text-gray-900">Churn Risk Alerts</h3>
-              {churn && <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{churn.count}</span>}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          {/* Churn */}
+          <Card pad={20}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <Icon name="trending_down" size={18} fill color="var(--amber-600)" />
+              <span style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--ink)' }}>Churn Risk Donors</span>
+              {churn && <Badge tone="amber">{churn.count}</Badge>}
             </div>
-            {churn && churn.donors && churn.donors.length > 0 ? (
-              <div className="space-y-1 max-h-80 overflow-y-auto">
-                {churn.donors.slice(0, 20).map((d, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-gray-50 text-xs border-b border-gray-100 last:border-0">
-                    <div>
-                      <span className="font-mono font-bold text-gray-700">{d.user_id.slice(0, 12)}...</span>
-                      <span className="text-gray-400 ml-2">{d.blood_group}</span>
+            {churn?.donors?.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 380, overflowY: 'auto' }}>
+                {churn.donors.slice(0, 20).map((d, i) => {
+                  const act = ACTION_CFG[d.action] || { tone: 'neutral', label: d.action };
+                  return (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 12px', borderRadius: 8, background: 'var(--line-soft)' }}>
+                      <div>
+                        <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--ff-mono)', color: 'var(--ink)' }}>{d.user_id.slice(0, 12)}…</span>
+                        <span style={{ fontSize: 11.5, color: 'var(--muted)', marginLeft: 8 }}>{d.blood_group}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--amber-600)', fontFamily: 'var(--ff-mono)' }}>{(d.churn_risk * 100).toFixed(0)}%</span>
+                        <Badge tone={act.tone}>{act.label}</Badge>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-amber-600">{(d.churn_risk * 100).toFixed(0)}%</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        d.action === 'do-not-disturb' ? 'bg-rose-100 text-rose-700' :
-                        d.action === 'send-appreciation' ? 'bg-purple-100 text-purple-700' :
-                        d.action === 'wait' ? 'bg-gray-100 text-gray-600' :
-                        'bg-emerald-100 text-emerald-700'
-                      }`}>
-                        {d.action}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
-              <p className="text-xs text-gray-400">No high-churn donors</p>
+              <p style={{ fontSize: 13, color: 'var(--muted)' }}>No high-churn donors</p>
             )}
-          </div>
+          </Card>
 
-          {/* Urgent Patients */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-sm font-extrabold text-gray-900">Urgent Transfusions</h3>
-              {urgent && <span className="text-xs font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">{urgent.count}</span>}
+          {/* Urgent */}
+          <Card pad={20}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <Icon name="emergency" size={18} fill color="var(--red-500)" />
+              <span style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--ink)' }}>Urgent Transfusions</span>
+              {urgent && <Badge tone="red">{urgent.count}</Badge>}
             </div>
-            {urgent && urgent.patients && urgent.patients.length > 0 ? (
-              <div className="space-y-1 max-h-80 overflow-y-auto">
+            {urgent?.patients?.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 380, overflowY: 'auto' }}>
                 {urgent.patients.map((p, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-gray-50 text-xs border-b border-gray-100 last:border-0">
+                  <div key={i} style={{ padding: '9px 12px', borderRadius: 8, background: 'var(--line-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <span className="font-mono font-bold text-gray-700">{p.user_id.slice(0, 12)}...</span>
-                      <span className="text-gray-400 ml-2">{p.blood_group}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'var(--ff-mono)', color: 'var(--ink)' }}>{p.user_id.slice(0, 12)}…</span>
+                      <span style={{ fontSize: 11.5, color: 'var(--red-600)', marginLeft: 8, fontWeight: 700 }}>{p.blood_group}</span>
                     </div>
-                    <div className="text-right">
-                      <span className="text-gray-600">{p.quantity_required} units</span>
-                      <span className="text-gray-400 ml-2">by {p.expected_next_transfusion_date}</span>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)' }}>{p.quantity_required} units</div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>by {p.expected_next_transfusion_date}</div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-gray-400">No urgent cases</p>
+              <p style={{ fontSize: 13, color: 'var(--muted)' }}>No urgent cases</p>
             )}
-          </div>
+          </Card>
         </div>
       )}
     </div>
   );
 }
 
-function KPI({ label, value, accent }) {
-  return (
-    <div className={`bg-white rounded-2xl border border-gray-200 p-4 shadow-sm ${accent ? 'ring-2 ring-rose-100' : ''}`}>
-      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
-      <p className={`text-2xl font-black tabular-nums tracking-tight ${accent ? 'text-rose-600' : 'text-gray-900'}`}>{value ?? '—'}</p>
-    </div>
-  );
-}
-
-function ShortageCard({ title, items, color }) {
+function ShortageCard({ title, items, tone }) {
   if (!items || items.length === 0) return null;
-  const bg = color === 'rose' ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200';
-  const text = color === 'rose' ? 'text-rose-800' : 'text-amber-800';
-
+  const colors = {
+    red:   { bg: 'var(--red-50)',   border: 'var(--red-100)',  text: 'var(--red-700)',  val: 'var(--red-600)' },
+    amber: { bg: 'var(--amber-50)', border: 'var(--amber-100)', text: 'var(--amber-600)', val: 'var(--amber-600)' },
+  };
+  const c = colors[tone];
   return (
-    <div className={`rounded-2xl border p-5 ${bg}`}>
-      <h3 className={`text-sm font-extrabold mb-3 ${text}`}>{title} ({items.length})</h3>
-      <div className="space-y-2">
+    <div style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 14, padding: 18 }}>
+      <div style={{ fontSize: 12.5, fontWeight: 800, color: c.text, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <Icon name={tone === 'red' ? 'crisis_alert' : 'warning'} size={15} fill color={c.text} />
+        {title} ({items.length})
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {items.map((r, i) => (
-          <div key={i} className="flex items-center justify-between text-xs bg-white/60 rounded-lg p-2">
-            <span className="font-mono font-bold text-gray-800">{r.blood_group}</span>
-            <div className="flex items-center gap-3">
-              <span className="text-gray-600">{Math.round(r.supply_units)} units</span>
-              <span className={`font-bold ${text}`}>{r.days_of_coverage?.toFixed(1)}d coverage</span>
-              <span className="text-gray-500">short {Math.round(r.shortfall_units)}</span>
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,.65)', borderRadius: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--ink)', fontFamily: 'var(--ff-mono)' }}>{r.blood_group}</span>
+            <div style={{ display: 'flex', gap: 14, fontSize: 12 }}>
+              <span style={{ color: 'var(--muted)' }}>{Math.round(r.supply_units)} units</span>
+              <span style={{ color: c.val, fontWeight: 700 }}>{r.days_of_coverage?.toFixed(1)}d coverage</span>
+              <span style={{ color: 'var(--muted)' }}>short {Math.round(r.shortfall_units)}</span>
             </div>
           </div>
         ))}

@@ -635,11 +635,10 @@ export default function AdminDashboard({ onLogout }) {
       <Sidebar onLogout={onLogout} />
       <div style={{ flex: 1, background: C.bg, overflowY: 'auto', height: '100vh' }}>
         <Routes>
-          <Route path="/admin" element={<><TopBar page="dashboard" /><DashboardHome /></>} />
-          <Route path="/admin/bridges" element={<><TopBar page="bridges" /><BridgesPage /></>} />
-          <Route path="/admin/agents" element={<><TopBar page="agents" /><AgentsPage /></>} />
-          <Route path="/admin/supply" element={<><TopBar page="supply" /><SupplyPage /></>} />
-          <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
+          <Route index element={<><TopBar page="dashboard" /><DashboardHome /></>} />
+          <Route path="bridges" element={<><TopBar page="bridges" /><BridgesPage /></>} />
+          <Route path="agents" element={<><TopBar page="agents" /><AgentsPage /></>} />
+          <Route path="supply" element={<><TopBar page="supply" /><SupplyPage /></>} />
         </Routes>
       </div>
     </div>
