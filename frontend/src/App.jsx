@@ -4,6 +4,7 @@ import LandingPage from './pages/Landing/LandingPage';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import DonorPortal from './pages/Portal/DonorPortal';
 import PatientPortal from './pages/Portal/PatientPortal';
+import SignUpFlow from './pages/Auth/SignUpFlow';
 import Navbar from './components/Navbar';
 import ChatWidget from './components/ChatWidget';
 
@@ -26,9 +27,21 @@ class ErrorBoundary extends Component {
 export default function App() {
   const [role, setRole] = useState(null);
   const [userId, setUserId] = useState(null);
-  const handleLogout = () => { setRole(null); setUserId(null); };
+  const [inSignUp, setInSignUp] = useState(false);
+  const handleLogout = () => { setRole(null); setUserId(null); setInSignUp(false); };
 
-  if (!role) return <LandingPage onSelectRole={setRole} />;
+  if (!role && inSignUp) {
+    return (
+      <ErrorBoundary>
+        <SignUpFlow
+          onComplete={(selectedRole, _formData) => { setRole(selectedRole); setInSignUp(false); }}
+          onBack={() => setInSignUp(false)}
+        />
+      </ErrorBoundary>
+    );
+  }
+
+  if (!role) return <LandingPage onSelectRole={setRole} onSignUp={() => setInSignUp(true)} />;
 
   // Admin gets its own full-page layout with sidebar (no top Navbar, no ChatWidget)
   if (role === 'admin') {

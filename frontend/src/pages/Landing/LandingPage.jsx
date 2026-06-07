@@ -94,7 +94,7 @@ function BridgePreview() {
   );
 }
 
-export default function LandingPage({ onSelectRole }) {
+export default function LandingPage({ onSelectRole, onSignUp }) {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       {/* sticky nav */}
@@ -104,6 +104,7 @@ export default function LandingPage({ onSelectRole }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Badge tone="red" dot>powered by Blood Warriors</Badge>
             <Btn variant="ghost" size="sm" onClick={() => onSelectRole('donor')}>Sign in</Btn>
+            <Btn variant="primary" size="sm" onClick={onSignUp}>Sign Up</Btn>
           </div>
         </div>
       </header>
@@ -124,8 +125,8 @@ export default function LandingPage({ onSelectRole }) {
               so the blood is there when it's needed. No scrambling. No last-minute calls.
             </p>
             <div style={{ display: 'flex', gap: 12, marginTop: 28, flexWrap: 'wrap' }}>
-              <Btn variant="primary" size="lg" icon="water_drop" onClick={() => onSelectRole('donor')}>I want to donate</Btn>
-              <Btn variant="ghost" size="lg" icon="favorite" onClick={() => onSelectRole('patient')}>I need support</Btn>
+              <Btn variant="primary" size="lg" icon="water_drop" onClick={onSignUp}>Sign Up — I want to donate</Btn>
+              <Btn variant="ghost" size="lg" icon="favorite" onClick={onSignUp}>Sign Up — I need support</Btn>
             </div>
             <div style={{ display: 'flex', gap: 28, marginTop: 36, flexWrap: 'wrap' }}>
               <StatChip value="4,446" label="donors in the network" />

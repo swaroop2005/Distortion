@@ -87,21 +87,23 @@ const NAV = [
   { path: '/admin/bridges', label: 'Bridges', icon: 'hub' },
   { path: '/admin/agents', label: 'Agent Log', icon: 'terminal', live: true },
   { path: '/admin/supply', label: 'Supply', icon: 'local_hospital' },
+  { path: '/admin/donors', label: 'Donors', icon: 'volunteer_activism' },
+  { path: '/admin/patients', label: 'Patients', icon: 'favorite' },
 ];
 
 /* ── sidebar ───────────────────────────────────────────────── */
 function Sidebar({ onLogout }) {
   const location = useLocation();
   return (
-    <nav style={{ width: 220, minWidth: 220, background: C.navy, display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh' }}>
-      <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid #163660' }}>
+    <nav style={{ width: 220, minWidth: 220, background: '#16171c', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', borderRight: '1px solid #24262e' }}>
+      <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid #24262e' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <svg width="30" height="30" viewBox="0 0 24 24" fill="#ff5269">
             <path d="M12 2S5 10 5 15a7 7 0 0 0 14 0c0-5-7-13-7-13z"/>
           </svg>
           <div style={{ lineHeight: 1 }}>
             <div style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-.03em', color: '#fff' }}>Thal<span style={{ color: C.red }}>Net</span></div>
-            <div style={{ fontSize: 10.5, color: '#aebfd4', fontWeight: 600, letterSpacing: '.04em', marginTop: 2 }}>COMMAND CENTER</div>
+            <div style={{ fontSize: 10.5, color: '#7a7d87', fontWeight: 600, letterSpacing: '.04em', marginTop: 2 }}>COMMAND CENTER</div>
           </div>
         </div>
       </div>
@@ -113,27 +115,27 @@ function Sidebar({ onLogout }) {
           return (
             <Link key={item.path} to={item.path} style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 9,
-              background: active ? C.red : 'transparent', color: active ? '#fff' : '#aebfd4',
+              background: active ? '#23252c' : 'transparent', color: active ? '#fff' : '#7a7d87',
               fontWeight: active ? 700 : 500, fontSize: 13.5, textDecoration: 'none', transition: 'all .15s',
             }}>
-              <Ic n={item.icon} z={18} fill={active} col={active ? '#fff' : '#6b8bad'} />
+              <Ic n={item.icon} z={18} fill={active} col={active ? '#e11d2a' : '#5a5d68'} />
               {item.label}
               {item.live && <span style={{ marginLeft: 'auto', background: 'rgba(127,211,168,.15)', color: '#7fd3a8', borderRadius: 99, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>live</span>}
             </Link>
           );
         })}
       </div>
-      <div style={{ padding: '12px 14px', borderTop: '1px solid #163660' }}>
+      <div style={{ padding: '12px 14px', borderTop: '1px solid #24262e' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 99, background: '#163660', display: 'grid', placeItems: 'center' }}>
-            <Ic n="person" z={16} col="#aebfd4" />
+          <div style={{ width: 30, height: 30, borderRadius: 99, background: '#23252c', display: 'grid', placeItems: 'center' }}>
+            <Ic n="person" z={16} col="#7a7d87" />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 12.5, fontWeight: 700, color: '#e2eaf4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Coordinator</div>
-            <div style={{ fontSize: 11, color: '#6b8bad' }}>Blood Warriors</div>
+            <div style={{ fontSize: 11, color: '#5a5d68' }}>Blood Warriors</div>
           </div>
           <button onClick={onLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-            <Ic n="logout" z={16} col="#6b8bad" />
+            <Ic n="logout" z={16} col="#5a5d68" />
           </button>
         </div>
       </div>
@@ -149,6 +151,8 @@ function TopBar({ page }) {
     bridges: { title: 'Bridge Management', sub: 'Auto-Bridge Builder · 8→1 donor coverage' },
     agents: { title: 'Agent Activity Log', sub: 'Triage → Outreach → Escalate → Learn' },
     supply: { title: 'Supply Intelligence', sub: 'National blood stock · e-RaktKosh data' },
+    donors: { title: 'Donor Pool', sub: '4,446 donors · ML-ranked by reliability' },
+    patients: { title: 'Patient Registry', sub: '84 patients · bridge status overview' },
   };
   const lbl = labels[page] || labels.dashboard;
   return (
@@ -632,6 +636,164 @@ function DashboardHome() {
   );
 }
 
+/* ── donors page ───────────────────────────────────────────── */
+function DonorsPage() {
+  const [donors, setDonors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+
+  useEffect(() => {
+    // fetch from backend: GET /admin/donors?limit=50
+    fetch(`${import.meta.env.VITE_API_URL || ''}/admin/donors?limit=50`)
+      .then(r => r.json())
+      .then(d => { setDonors(d.donors || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const shown = donors.filter(d => {
+    const matchSearch = !search || (d.user_id || '').toLowerCase().includes(search.toLowerCase());
+    const matchFilter = filter === 'all' ||
+      (filter === 'high-churn' && (d.churn_risk || 0) > 0.6) ||
+      (filter === 'eligible' && d.eligible);
+    return matchSearch && matchFilter;
+  });
+
+  return (
+    <div style={{ padding: '24px 26px 60px', maxWidth: 1400 }}>
+      <div style={{ background: '#fff', border: `1px solid #e3e9f0`, borderRadius: 14, overflow: 'hidden' }}>
+        <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid #e3e9f0', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, letterSpacing: '.5px', textTransform: 'uppercase', color: '#0a2540' }}>All Donors</div>
+            <div style={{ fontSize: 12, color: '#9aa5b2', marginTop: 2 }}>{donors.length} enrolled · ML churn + responsiveness scored</div>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {['all', 'eligible', 'high-churn'].map(f => (
+              <button key={f} onClick={() => setFilter(f)} style={{ padding: '6px 13px', borderRadius: 99, border: `1px solid ${filter === f ? 'transparent' : '#e3e9f0'}`, background: filter === f ? '#e63148' : '#fff', color: filter === f ? '#fff' : '#6b7a8d', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize' }}>{f}</button>
+            ))}
+          </div>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by ID…" style={{ padding: '7px 12px', borderRadius: 99, border: '1px solid #e3e9f0', fontSize: 13, fontFamily: 'inherit', background: '#f6f6f8', width: 160, outline: 'none' }} />
+        </div>
+        {loading ? (
+          <div style={{ padding: 40, textAlign: 'center', color: '#9aa5b2' }}>Loading donors…</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
+              <thead>
+                <tr style={{ background: '#f6f6f8' }}>
+                  {['Donor ID', 'Blood Group', 'Eligible', 'Churn Risk', 'Responsiveness', 'Donations'].map(h => (
+                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: '#9aa5b2', fontSize: 12, letterSpacing: '.05em', textTransform: 'uppercase', borderBottom: '1px solid #e3e9f0', whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {shown.slice(0, 50).map((d, i) => {
+                  const churn = d.churn_risk || 0;
+                  const resp = d.responsiveness || 0;
+                  const churnCol = churn > 0.6 ? '#e63148' : churn > 0.35 ? '#f5a524' : '#17b26a';
+                  return (
+                    <tr key={d.user_id || i} style={{ borderBottom: '1px solid #f0f0f3' }}>
+                      <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: '#6b7a8d' }}>{d.user_id?.slice(0, 12)}…</td>
+                      <td style={{ padding: '10px 14px', fontWeight: 700 }}>{d.blood_group || '—'}</td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 700, background: d.eligible ? '#ecfdf5' : '#fef2f2', color: d.eligible ? '#17b26a' : '#e5484d' }}>
+                          {d.eligible ? 'Yes' : 'No'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ flex: 1, height: 5, borderRadius: 99, background: '#e3e9f0', overflow: 'hidden', minWidth: 60 }}>
+                            <div style={{ width: (churn * 100) + '%', height: '100%', background: churnCol, borderRadius: 99 }} />
+                          </div>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: churnCol, minWidth: 30 }}>{Math.round(churn * 100)}%</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '10px 14px', fontSize: 13, fontWeight: 600, color: '#6b7a8d' }}>{Math.round(resp * 100)}%</td>
+                      <td style={{ padding: '10px 14px', fontSize: 13, color: '#6b7a8d' }}>{d.total_donations || d.donations || 0}</td>
+                    </tr>
+                  );
+                })}
+                {shown.length === 0 && (
+                  <tr><td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#9aa5b2' }}>No donors match.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── patients page ─────────────────────────────────────────── */
+function PatientsPage() {
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL || ''}/admin/patients?limit=50`)
+      .then(r => r.json())
+      .then(d => { setPatients(d.patients || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const shown = patients.filter(p =>
+    !search || (p.user_id || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div style={{ padding: '24px 26px 60px', maxWidth: 1400 }}>
+      <div style={{ background: '#fff', border: '1px solid #e3e9f0', borderRadius: 14, overflow: 'hidden' }}>
+        <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid #e3e9f0', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, letterSpacing: '.5px', textTransform: 'uppercase', color: '#0a2540' }}>All Patients</div>
+            <div style={{ fontSize: 12, color: '#9aa5b2', marginTop: 2 }}>{patients.length} in network</div>
+          </div>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by ID…" style={{ padding: '7px 12px', borderRadius: 99, border: '1px solid #e3e9f0', fontSize: 13, fontFamily: 'inherit', background: '#f6f6f8', width: 160, outline: 'none' }} />
+        </div>
+        {loading ? (
+          <div style={{ padding: 40, textAlign: 'center', color: '#9aa5b2' }}>Loading patients…</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
+              <thead>
+                <tr style={{ background: '#f6f6f8' }}>
+                  {['Patient ID', 'Blood Group', 'Next Transfusion', 'Bridge', 'Quantity', 'Location'].map(h => (
+                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: '#9aa5b2', fontSize: 12, letterSpacing: '.05em', textTransform: 'uppercase', borderBottom: '1px solid #e3e9f0', whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {shown.slice(0, 50).map((p, i) => {
+                  const integ = (p.bridge_integrity || 'full').toLowerCase().replace(/[\s-]/g, '');
+                  const integCol = integ === 'broken' ? '#e63148' : integ === 'atrisk' ? '#f5a524' : '#17b26a';
+                  const integLabel = integ === 'broken' ? 'Broken' : integ === 'atrisk' ? 'At risk' : 'Full';
+                  return (
+                    <tr key={p.user_id || i} style={{ borderBottom: '1px solid #f0f0f3' }}>
+                      <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: '#6b7a8d' }}>{p.user_id?.slice(0, 12)}…</td>
+                      <td style={{ padding: '10px 14px', fontWeight: 700 }}>{p.blood_group || '—'}</td>
+                      <td style={{ padding: '10px 14px', fontSize: 13, color: '#16202c' }}>{p.expected_next_transfusion_date || '—'}</td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 700, background: integ === 'broken' ? '#fef2f2' : integ === 'atrisk' ? '#fffbeb' : '#ecfdf5', color: integCol }}>{integLabel}</span>
+                      </td>
+                      <td style={{ padding: '10px 14px', fontSize: 13, color: '#6b7a8d' }}>{p.quantity_required || '—'} units</td>
+                      <td style={{ padding: '10px 14px', fontSize: 12, color: '#9aa5b2', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.area || p.district || '—'}</td>
+                    </tr>
+                  );
+                })}
+                {shown.length === 0 && (
+                  <tr><td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#9aa5b2' }}>No patients found.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── exports used by BridgesPage / AgentsPage ──────────────── */
 export function LoadingState() { return <div style={{ padding: 40, textAlign: 'center' }}><Spinner /></div>; }
 export function ErrorState({ msg }) { return <div style={{ padding: 26 }}><ErrBox msg={msg} /></div>; }
@@ -649,6 +811,8 @@ export default function AdminDashboard({ onLogout }) {
           <Route path="bridges" element={<><TopBar page="bridges" /><BridgesPage /></>} />
           <Route path="agents" element={<><TopBar page="agents" /><AgentsPage /></>} />
           <Route path="supply" element={<><TopBar page="supply" /><SupplyPage /></>} />
+          <Route path="donors" element={<><TopBar page="donors" /><DonorsPage /></>} />
+          <Route path="patients" element={<><TopBar page="patients" /><PatientsPage /></>} />
         </Routes>
       </div>
     </div>
