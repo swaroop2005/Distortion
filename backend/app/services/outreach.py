@@ -235,7 +235,7 @@ class BedrockLLM:
         try:
             import boto3
             self.client = boto3.client("bedrock-runtime", region_name="us-east-1")
-            self.model_id = "anthropic.claude-haiku-4-5"
+            self.model_id = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
         except Exception:
             raise RuntimeError("boto3 not configured — set AWS credentials or use THALNET_LLM_BACKEND=mock")
 
