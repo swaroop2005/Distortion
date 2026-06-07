@@ -7,7 +7,7 @@ export default function ChatWidget({ role = 'public', userId = null }) {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [messages, setMessages] = useState([
-    { from: 'bot', text: "Hi! I'm the Blood Warriors assistant. Ask me about donating, your eligibility, your bridge, blood availability, or thalassemia wellness tips." },
+    { from: 'bot', text: "Blood Warriors assistant. Ask me about donation eligibility, your bridge, blood banks near you, thalassemia, or pre-donation questions (tired, cold, medication, nerves, etc.)." },
   ]);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);

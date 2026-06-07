@@ -21,10 +21,13 @@ export const healBridge = (id) => request(`/admin/bridges/${id}/heal`, { method:
 export const getChurnAlerts = (threshold = 0.5) => request(`/admin/alerts/churn?threshold=${threshold}`);
 export const getUrgentAlerts = () => request('/admin/alerts/urgent');
 
+// Registration
+export const registerDonor = (data) => request('/donors/register', { method: 'POST', body: JSON.stringify(data) });
+export const registerPatient = (data) => request('/patients/register', { method: 'POST', body: JSON.stringify(data) });
+
 // Donor portal
 export const getDonor = (id) => request(`/donors/${id}`);
 export const getDonorClock = (id) => request(`/donors/${id}/clock`);
-export const registerDonor = (data) => request('/donors/register', { method: 'POST', body: JSON.stringify(data) });
 
 // Patient portal
 export const getPatient = (id) => request(`/patients/${id}`);
@@ -32,17 +35,30 @@ export const createBridge = (patientId, size = 8) => request(`/patients/${patien
 
 // Agent / orchestrator
 export const triggerTransfusion = (patientId) => request(`/agent/transfusion-due/${patientId}`, { method: 'POST' });
+export const triggerNewDonor = (donorId) => request(`/agent/new-donor/${donorId}`, { method: 'POST' });
+export const triggerEmergency = (data) => request('/agent/emergency', { method: 'POST', body: JSON.stringify(data) });
 export const getAgentRequests = () => request('/agent/requests');
 export const getAgentEvents = (limit = 50) => request(`/agent/events?limit=${limit}`);
 export const getAgentLearning = () => request('/agent/learning');
+export const getAgentOutcomes = () => request('/agent/outcomes');
 
 // Supply
 export const getRegionalSupply = (state = 'Telangana') => request(`/supply/regional?state=${encodeURIComponent(state)}`);
 export const getMobilization = () => request('/supply/mobilization');
+export const getSupplyBanks = (district, bloodGroup) => {
+  const params = new URLSearchParams();
+  if (district) params.set('district', district);
+  if (bloodGroup) params.set('blood_group', bloodGroup);
+  return request(`/supply/banks?${params}`);
+};
+export const getPatientMap = (patientId) => request(`/supply/patient-map?patient_id=${encodeURIComponent(patientId)}`);
 
 // Chatbot
 export const sendChatMessage = (message, role = 'public', userId = null) =>
   request('/chat', { method: 'POST', body: JSON.stringify({ message, role, user_id: userId }) });
+export const learnFaq = (question, answer, source = 'Admin') =>
+  request('/chat/learn', { method: 'POST', body: JSON.stringify({ question, answer, source }) });
+export const getUnanswered = (limit = 50) => request(`/chat/unanswered?limit=${limit}`);
 
 // Community — blood requests
 export const createRequest = (data) =>

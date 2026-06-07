@@ -10,14 +10,17 @@ something so we both always know the state of play. Newest entries at the top of
 
 ## Current status
 
-🟢 **EC2 LIVE, DynamoDB LIVE, Step Functions LIVE, Bedrock LIVE. Frontend running in screen session (survives SSH disconnect). Admin page crash fixed — verify by opening http://100.48.60.79:3000.**
+🟢 **FULLY LIVE. EC2 + DynamoDB + Step Functions + Bedrock + all 32 endpoints. Frontend screen session. Sign Up wizard wired to backend. BloodBridge radial viz in patient portal. Admin dark sidebar + Donors/Patients pages.**
+- Frontend: `http://100.48.60.79:3000` (screen session, use restart cmd if dead)
+- Backend: `http://100.48.60.79:8000` (uvicorn, THALNET_LLM_BACKEND=bedrock)
+- Restart frontend serve: `ssh -i ~/Downloads/launch1.pem ec2-user@100.48.60.79 'screen -dmS frontend bash -c "/home/ec2-user/.nvm/versions/node/v20.20.2/bin/serve -s /home/ec2-user/Distortion/frontend/dist -l 3000 2>&1 | tee /tmp/frontend.log"'`
 - EC2: `http://100.48.60.79` (port 80 dead, use **port 3000**)
 - Frontend: `http://100.48.60.79:3000` — React app served via `serve -s dist -l 3000`
 - Backend: `http://100.48.60.79:8000` — FastAPI + uvicorn, `THALNET_LLM_BACKEND=bedrock`
 - Bedrock: **LIVE** — `us.anthropic.claude-haiku-4-5-20251001-v1:0` (inference profile, required)
 - IAM role `ThalNet-EC2-Bedrock` attached to EC2 (BedrockFullAccess)
 - SSH key: `~/Downloads/launch1.pem` · AWS CLI at `~/aws-cli-install/aws-cli/aws`
-- **OPEN BUG:** Admin dashboard shows blank white screen after clicking Admin on landing page. Error boundary added to App.jsx to catch + display crash. Next step: load page, read the red error box, fix root cause.
+- **Next:** Chatbot widget UI component (api.js `sendChatMessage` ready, no frontend widget yet).
 
 ## Locked scope (this session)
 **Flagship = Auto-Bridge Builder** (8→1 bridge: auto-form + eligibility-stagger + self-heal +
@@ -146,6 +149,10 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
   Carrier screening already exists → correctly cut.
 
 ## Daily log (newest first)
+### 2026-06-07 (session 9)
+- **✅ Signup wired to backend** — `POST /patients/register` added to backend (returns synthetic patient_id). Duplicate `registerDonor` in api.js removed. `SignUpFlow.jsx`: async `nextPatient`/`nextDonor` call backend on last step, show loading state + error. Built + deployed. — _Claude_
+- **✅ All systems live at http://100.48.60.79:3000** — frontend screen session running, backend :8000 healthy, Bedrock live, DynamoDB live, all 32 endpoints. — _Claude_
+
 ### 2026-06-07 (session 8)
 - **✅ BloodBridge radial viz** — SVG-based radial map: patient node center, 8 donor nodes in orbit, color-coded by status (confirmed/scheduled/awaiting/resting/lapsed/open), completeness arc ring, thin connection lines, click-donor popover with self-heal button. 693 lines. Replaces flat grid in PatientPortal. — _Claude_
 - **✅ SignUpFlow wizard** — Role picker (Patient/Donor/Admin 3 cards) + 4-step patient wizard + 3-step donor wizard. Blood group grid, location, health check toggles, success screens. "Sign Up" button on landing triggers this. Admin card → direct to dashboard. — _Claude_

@@ -87,6 +87,37 @@ def get_patient_detail(patient_id: str):
     }
 
 
+class RegisterPatientRequest(BaseModel):
+    """Request to register as a new patient (caregiver or self)."""
+    name: str
+    phone: str = ""
+    blood_group: str = ""
+    thal_type: str = "major"
+    language: str = "English"
+    latitude: float = 17.385
+    longitude: float = 78.486
+
+
+@router.post("/register")
+def register_patient(req: RegisterPatientRequest):
+    """Register a new patient into the ThalNet network.
+
+    Demo: in-memory only. Production writes to DynamoDB.
+    Returns a synthetic patient ID for the demo session.
+    """
+    import uuid
+    from ..services.compat import normalize_blood_group
+    norm_group = normalize_blood_group(req.blood_group) if req.blood_group else "Unknown"
+    patient_id = "PT-" + str(uuid.uuid4())[:8].upper()
+    return {
+        "status": "registered",
+        "patient_id": patient_id,
+        "blood_group": norm_group,
+        "message": "Your blood bridge is being built. We'll contact you when your first donor confirms.",
+        "note": "Demo mode — stored in-memory. Production writes to DynamoDB.",
+    }
+
+
 class BridgeRequest(BaseModel):
     """Request to create a bridge of specified size (donors)."""
     size: int = 8

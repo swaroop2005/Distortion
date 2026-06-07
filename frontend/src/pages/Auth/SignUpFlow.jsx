@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Icon } from '../../design';
+import { registerDonor, registerPatient } from '../../services/api';
 
 // ─── Design tokens (inline, no Tailwind) ────────────────────────────────────
 const T = {
@@ -765,6 +766,29 @@ function RolePickerCard({ title, subtitle, accent, icon, label, onClick }) {
   );
 }
 
+// ─── Shared wizard header ─────────────────────────────────────────────────────
+
+function WizardHeader({ title, subtitle }) {
+  return (
+    <div style={{ padding: '28px 28px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
+        <div style={{ width: 28, height: 28, borderRadius: 8, background: T.red, display: 'grid', placeItems: 'center' }}>
+          <Icon name="water_drop" size={15} fill color="#fff" />
+        </div>
+        <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-.03em', color: T.ink }}>
+          Thal<span style={{ color: T.red }}>Net</span>
+        </span>
+      </div>
+      {title && (
+        <>
+          <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.02em', color: T.ink }}>{title}</h2>
+          {subtitle && <p style={{ fontSize: 14, color: T.muted, marginTop: 6, lineHeight: 1.55 }}>{subtitle}</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Main wizard shell ────────────────────────────────────────────────────────
 
 const PATIENT_STEP_LABELS = ['About You', 'Medical Details', 'Location', 'Emergency Contact'];
@@ -775,6 +799,8 @@ export default function SignUpFlow({ onComplete, onBack }) {
   const [screen, setScreen] = useState(0);
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
   const scrollRef = useRef(null);
 
   function scrollTop() {
@@ -825,15 +851,54 @@ export default function SignUpFlow({ onComplete, onBack }) {
     return e;
   }
 
-  function nextPatient() {
+  async function nextPatient() {
     const e = validatePatient(patientStep);
     if (Object.keys(e).length) { setErrors(e); return; }
+    // Last patient step — call backend
+    if (screen === 4) {
+      setSubmitting(true);
+      setSubmitError(null);
+      try {
+        const res = await registerPatient({
+          name: formData.name || '',
+          phone: formData.phone || '',
+          blood_group: formData.bloodGroup || '',
+          thal_type: formData.thalType || 'major',
+          language: formData.language || 'English',
+        });
+        setFormData(d => ({ ...d, _registeredId: res.patient_id }));
+        go(screen + 1);
+      } catch (err) {
+        setSubmitError(err.message || 'Registration failed. Please try again.');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
     go(screen + 1);
   }
 
-  function nextDonor() {
+  async function nextDonor() {
     const e = validateDonor(donorStep);
     if (Object.keys(e).length) { setErrors(e); return; }
+    // Last donor step — call backend
+    if (screen === 13) {
+      setSubmitting(true);
+      setSubmitError(null);
+      try {
+        const res = await registerDonor({
+          blood_group: formData.bloodGroup || 'O+',
+          gender: formData.gender || 'Unknown',
+        });
+        setFormData(d => ({ ...d, _registeredGroup: res.blood_group }));
+        go(screen + 1);
+      } catch (err) {
+        setSubmitError(err.message || 'Registration failed. Please try again.');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
     go(screen + 1);
   }
 
@@ -857,35 +922,12 @@ export default function SignUpFlow({ onComplete, onBack }) {
     width: '100%', maxWidth: 520, overflow: 'hidden',
   };
 
-  // ── Header ──
-  function Header({ title, subtitle }) {
-    return (
-      <div style={{ padding: '28px 28px 0' }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: T.red, display: 'grid', placeItems: 'center' }}>
-            <Icon name="water_drop" size={15} fill color="#fff" />
-          </div>
-          <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-.03em', color: T.ink }}>
-            Thal<span style={{ color: T.red }}>Net</span>
-          </span>
-        </div>
-        {title && (
-          <>
-            <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.02em', color: T.ink }}>{title}</h2>
-            {subtitle && <p style={{ fontSize: 14, color: T.muted, marginTop: 6, lineHeight: 1.55 }}>{subtitle}</p>}
-          </>
-        )}
-      </div>
-    );
-  }
-
   // ── Role picker ──────────────────────────────────────────────
   if (screen === 0) {
     return (
       <div style={containerStyle}>
         <div style={{ ...cardStyle, maxWidth: 820 }} ref={scrollRef}>
-          <Header />
+          <WizardHeader />
           <div style={{ padding: '4px 28px 28px' }}>
             <h2 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-.025em', color: T.ink, marginBottom: 6 }}>
               Who are you joining as?
@@ -950,15 +992,8 @@ export default function SignUpFlow({ onComplete, onBack }) {
       return (
         <div style={containerStyle}>
           <div style={cardStyle} ref={scrollRef}>
-            <div style={{ padding: '28px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 }}>
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: T.red, display: 'grid', placeItems: 'center' }}>
-                  <Icon name="water_drop" size={15} fill color="#fff" />
-                </div>
-                <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-.03em', color: T.ink }}>
-                  Thal<span style={{ color: T.red }}>Net</span>
-                </span>
-              </div>
+            <WizardHeader />
+            <div style={{ padding: '4px 28px 28px' }}>
               <PatientSuccess formData={formData} onComplete={onComplete} />
             </div>
           </div>
@@ -969,7 +1004,7 @@ export default function SignUpFlow({ onComplete, onBack }) {
     return (
       <div style={containerStyle}>
         <div style={cardStyle} ref={scrollRef}>
-          <Header title={stepTitle} subtitle={stepSubtitles[(patientStep || 1) - 1]} />
+          <WizardHeader title={stepTitle} subtitle={stepSubtitles[(patientStep || 1) - 1]} />
           <div style={{ padding: '20px 28px 28px' }}>
             <ProgressBar current={patientStep || 1} total={4} />
             {patientStep === 1 && <PatientStep1 data={formData} onChange={setFormData} errors={errors} />}
@@ -987,14 +1022,19 @@ export default function SignUpFlow({ onComplete, onBack }) {
               >
                 ← Back
               </button>
+              {submitError && patientStep === 4 && (
+                <div style={{ fontSize: 13, color: T.red, marginBottom: 8, textAlign: 'center' }}>{submitError}</div>
+              )}
               <button
-                onClick={patientStep === 4 ? nextPatient : nextPatient}
+                onClick={nextPatient}
+                disabled={submitting && patientStep === 4}
                 style={{
                   flex: 1, padding: '12px', borderRadius: 10, fontSize: 15, fontWeight: 700,
-                  background: T.red, color: '#fff', border: 'none', cursor: 'pointer', fontFamily: T.font,
+                  background: (submitting && patientStep === 4) ? '#f9b3bc' : T.red,
+                  color: '#fff', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: T.font,
                 }}
               >
-                {patientStep === 4 ? 'Create my blood bridge' : 'Continue →'}
+                {submitting && patientStep === 4 ? 'Registering…' : patientStep === 4 ? 'Create my blood bridge' : 'Continue →'}
               </button>
             </div>
           </div>
@@ -1016,15 +1056,8 @@ export default function SignUpFlow({ onComplete, onBack }) {
       return (
         <div style={containerStyle}>
           <div style={cardStyle} ref={scrollRef}>
-            <div style={{ padding: '28px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 }}>
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: T.red, display: 'grid', placeItems: 'center' }}>
-                  <Icon name="water_drop" size={15} fill color="#fff" />
-                </div>
-                <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-.03em', color: T.ink }}>
-                  Thal<span style={{ color: T.red }}>Net</span>
-                </span>
-              </div>
+            <WizardHeader />
+            <div style={{ padding: '4px 28px 28px' }}>
               <DonorSuccess formData={formData} onComplete={onComplete} />
             </div>
           </div>
@@ -1035,7 +1068,7 @@ export default function SignUpFlow({ onComplete, onBack }) {
     return (
       <div style={containerStyle}>
         <div style={cardStyle} ref={scrollRef}>
-          <Header title={stepTitle} subtitle={stepSubtitles[(donorStep || 1) - 1]} />
+          <WizardHeader title={stepTitle} subtitle={stepSubtitles[(donorStep || 1) - 1]} />
           <div style={{ padding: '20px 28px 28px' }}>
             <ProgressBar current={donorStep || 1} total={3} />
             {donorStep === 1 && <DonorStep1 data={formData} onChange={setFormData} errors={errors} />}
@@ -1052,14 +1085,19 @@ export default function SignUpFlow({ onComplete, onBack }) {
               >
                 ← Back
               </button>
+              {submitError && donorStep === 3 && (
+                <div style={{ fontSize: 13, color: T.red, marginBottom: 8, textAlign: 'center' }}>{submitError}</div>
+              )}
               <button
                 onClick={nextDonor}
+                disabled={submitting && donorStep === 3}
                 style={{
                   flex: 1, padding: '12px', borderRadius: 10, fontSize: 15, fontWeight: 700,
-                  background: T.green, color: '#fff', border: 'none', cursor: 'pointer', fontFamily: T.font,
+                  background: (submitting && donorStep === 3) ? '#a3d9bc' : T.green,
+                  color: '#fff', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: T.font,
                 }}
               >
-                {donorStep === 3 ? 'Join the network' : 'Continue →'}
+                {submitting && donorStep === 3 ? 'Joining…' : donorStep === 3 ? 'Join the network' : 'Continue →'}
               </button>
             </div>
           </div>

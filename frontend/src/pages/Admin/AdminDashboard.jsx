@@ -10,6 +10,8 @@ import { Icon, Spinner, ErrBox, IntegrityBadge } from '../../design';
 import BridgesPage from './BridgesPage';
 import AgentsPage from './AgentsPage';
 import SupplyPage from './SupplyPage';
+import ChatbotPage from './ChatbotPage';
+import OptimizerPage from './OptimizerPage';
 
 /* ── palette / tokens — matches dashboard.html ─────────────── */
 const C = {
@@ -89,6 +91,8 @@ const NAV = [
   { path: '/admin/supply', label: 'Supply', icon: 'local_hospital' },
   { path: '/admin/donors', label: 'Donors', icon: 'volunteer_activism' },
   { path: '/admin/patients', label: 'Patients', icon: 'favorite' },
+  { path: '/admin/chatbot', label: 'Chatbot', icon: 'chat' },
+  { path: '/admin/optimizer', label: 'Supply Map', icon: 'map' },
 ];
 
 /* ── sidebar ───────────────────────────────────────────────── */
@@ -813,6 +817,8 @@ export default function AdminDashboard({ onLogout }) {
           <Route path="supply" element={<><TopBar page="supply" /><SupplyPage /></>} />
           <Route path="donors" element={<><TopBar page="donors" /><DonorsPage /></>} />
           <Route path="patients" element={<><TopBar page="patients" /><PatientsPage /></>} />
+          <Route path="chatbot" element={<><TopBar page="chatbot" /><ChatbotPage /></>} />
+          <Route path="optimizer" element={<OptimizerPage />} />
         </Routes>
       </div>
     </div>
