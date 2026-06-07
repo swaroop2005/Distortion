@@ -41,16 +41,20 @@ IMPORTANT: reply ONLY in ${L.name}. If asked anything medical-emergency, advise 
     setMsgs(next);
     setBusy(true);
     try {
-      let reply;
-      if (window.claude && window.claude.complete) {
-        const history = next.slice(-6).map(m => `${m.role === "user" ? "User" : "Assistant"}: ${m.text}`).join("\n");
-        reply = await window.claude.complete({
-          messages: [{ role: "user", content: `${systemFor()}\n\nConversation so far:\n${history}\n\nReply as the Assistant in ${L.name}:` }],
-        });
-      } else {
-        reply = L.greet;
-      }
-      setMsgs(m => [...m, { role: "bot", text: (reply || "").trim() || "…" }]);
+      // Wired to the real ThalNet backend (/chat) — grounded chatbot + wellness.
+      const apiRole = role === "visitor" ? "public" : role;
+      const u = window.TN_USER || {};
+      const userId = apiRole === "donor" ? (u.donorId || null)
+                   : apiRole === "patient" ? (u.patientId || null) : null;
+      const base = window.API_BASE || "";
+      const res = await fetch(base + "/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: q, role: apiRole, user_id: userId, lang }),
+      });
+      if (!res.ok) throw new Error("chat " + res.status);
+      const data = await res.json();
+      setMsgs(m => [...m, { role: "bot", text: (data.reply || "").trim() || "…" }]);
     } catch (e) {
       setMsgs(m => [...m, { role: "bot", text: { en: "I'm having trouble responding right now. Please try again, or call +91 62814 77836 if it's urgent.", hi: "अभी जवाब देने में दिक्कत हो रही है। कृपया दोबारा कोशिश करें, या ज़रूरी हो तो +91 62814 77836 पर कॉल करें।", te: "ప్రస్తుతం స్పందించడంలో ఇబ్బంది ఉంది. దయచేసి మళ్లీ ప్రయత్నించండి, అత్యవసరమైతే +91 62814 77836 కి కాల్ చేయండి." }[lang] }]);
     } finally { setBusy(false); }

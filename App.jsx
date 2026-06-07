@@ -39,7 +39,10 @@ function AppBar({ role, setScreen }) {
 
 function App() {
   const [screen, setScreen] = useState("landing");
+  const [, bumpLive] = useState(0);
   useEffect(() => { window.scrollTo(0, 0); }, [screen]);
+  // Pull real backend data over the mock once, then re-render with live values.
+  useEffect(() => { if (window.loadLiveTN) window.loadLiveTN(() => bumpLive(n => n + 1)); }, []);
 
   const ctx = {
     patient: "patient dashboard — bridge health, next transfusion, request blood",
