@@ -11,6 +11,8 @@ export default defineConfig({
       '/patients': 'http://localhost:8000',
       '/agent': 'http://localhost:8000',
       '/supply': 'http://localhost:8000',
+      '/chat': 'http://localhost:8000',
+      '/community': 'http://localhost:8000',
     }
   }
 })
