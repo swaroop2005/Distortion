@@ -241,6 +241,24 @@ def test_non_participant_cannot_message_or_read():
         pass
 
 
+def test_empty_message_rejected():
+    req, donor_id, conn = _accepted_connection()
+    try:
+        cs.add_message(conn["connection_id"], req["patient_id"], "   ")
+        assert False, "expected BadState"
+    except cs.BadState:
+        pass
+
+
+def test_participant_reads_history_after_cancel():
+    req, donor_id, conn = _accepted_connection()
+    cid = conn["connection_id"]
+    cs.add_message(cid, req["patient_id"], "talked before cancel")
+    cs.cancel_connection(cid, req["patient_id"])
+    thread = cs.get_thread(cid, req["patient_id"])  # still readable by a participant
+    assert thread and thread[0]["text"] == "talked before cancel"
+
+
 if __name__ == "__main__":
     test_create_and_get_request()
     test_create_request_unknown_patient()
@@ -264,4 +282,6 @@ if __name__ == "__main__":
     test_message_before_accept_blocked()
     test_message_after_decline_blocked()
     test_non_participant_cannot_message_or_read()
+    test_empty_message_rejected()
+    test_participant_reads_history_after_cancel()
     print("test_community_store OK")

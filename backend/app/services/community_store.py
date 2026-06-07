@@ -222,6 +222,10 @@ def list_connections(user_id, role) -> list[dict]:
 # ── Private messages (only on accepted connections, only participants) ──────
 def add_message(connection_id, sender_id, text) -> dict:
     """Append a message. Requires an accepted connection and a participant sender."""
+    if not text or not str(text).strip():
+        raise BadState("message text cannot be empty")
+    if len(str(text)) > 2000:
+        raise BadState("message text exceeds 2000 characters")
     conn = _connections.get(connection_id)
     if not conn:
         raise NotFound(f"connection {connection_id} not found")
@@ -240,10 +244,16 @@ def add_message(connection_id, sender_id, text) -> dict:
 
 
 def get_thread(connection_id, requester_id) -> list[dict]:
-    """Return the ordered message thread. Only the two participants may read it."""
+    """Return the ordered message thread. Only the two participants may read it.
+
+    Read access is by participation only (no status guard): once a conversation
+    has happened, the two participants keep access to their own history even if
+    the connection is later cancelled/declined. Only *writing* requires "accepted".
+    Returns copies so callers can't mutate stored messages.
+    """
     conn = _connections.get(connection_id)
     if not conn:
         raise NotFound(f"connection {connection_id} not found")
     if str(requester_id) not in (conn["patient_id"], conn["donor_id"]):
         raise Forbidden("not a participant in this conversation")
-    return list(_messages.get(connection_id, []))
+    return [dict(m) for m in _messages.get(connection_id, [])]
