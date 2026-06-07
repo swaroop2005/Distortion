@@ -10,6 +10,7 @@ from ..services.bridge import all_bridges, bridge_health_summary, get_bridge, he
 from ..utils.compat import normalize_blood_group
 from ..utils.eligibility import is_eligible
 from ..services.store import all_donors, all_patients, get_donor, get_patient
+from ..supply_store import national_kpis, shortage_report
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 

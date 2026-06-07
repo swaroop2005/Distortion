@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { getDonor, getDonorClock, registerDonor } from '../../services/api';
+import { getDonor, getDonorClock, registerDonor, listConnections, respondConnection } from '../../services/api';
+import StatusBadge from '../../components/StatusBadge';
+import ConnectionChat from '../../components/ConnectionChat';
 
-function DonorLookup() {
+function DonorLookup({ setUserId }) {
   const [donorId, setDonorId] = useState('');
   const [donor, setDonor] = useState(null);
   const [clock, setClock] = useState(null);
@@ -20,6 +22,7 @@ function DonorLookup() {
       ]);
       setDonor(d);
       setClock(c);
+      if (setUserId) setUserId(d.user_id);
     } catch (e) {
       setError(e.message);
       setDonor(null);
@@ -94,6 +97,66 @@ function DonorLookup() {
             <Detail label="Responsiveness" value={`${(donor.responsiveness * 100).toFixed(0)}%`} />
             <Detail label="Churn Risk" value={`${(donor.churn_risk * 100).toFixed(0)}%`} color={donor.churn_risk > 0.5 ? 'text-rose-600' : 'text-gray-700'} />
           </div>
+        </div>
+      )}
+
+      {donor && <DonorInbox donorId={donor.user_id} />}
+    </div>
+  );
+}
+
+function DonorInbox({ donorId }) {
+  const [connections, setConnections] = useState([]);
+  const [error, setError] = useState(null);
+
+  const refresh = async () => {
+    try {
+      const r = await listConnections(donorId, 'donor');
+      setConnections(r.connections || []);
+      setError(null);
+    } catch (e) { setError(e.message); }
+  };
+
+  useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [donorId]);
+
+  const respond = async (connId, action) => {
+    try { await respondConnection(connId, donorId, action); await refresh(); }
+    catch (e) { setError(e.message); }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-extrabold text-gray-900">Connection Requests</h3>
+        <button onClick={refresh} className="text-[11px] font-bold text-rose-600 hover:text-rose-700">Refresh</button>
+      </div>
+      {error && <p className="text-sm text-rose-600 mb-2">{error}</p>}
+      {connections.length === 0 ? (
+        <p className="text-xs text-gray-400">No patients have requested you yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {connections.map(c => (
+            <div key={c.connection_id} className="border border-gray-100 rounded-xl p-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm">
+                  <span className="text-gray-400 text-xs">Patient </span>
+                  <span className="font-mono text-xs font-bold text-gray-700">{c.patient_id}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={c.status} />
+                  {c.status === 'pending' && (
+                    <>
+                      <button onClick={() => respond(c.connection_id, 'accept')}
+                        className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">Accept</button>
+                      <button onClick={() => respond(c.connection_id, 'decline')}
+                        className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold">Decline</button>
+                    </>
+                  )}
+                </div>
+              </div>
+              {c.status === 'accepted' && <ConnectionChat connectionId={c.connection_id} selfId={donorId} />}
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -184,10 +247,10 @@ function DonorRegister() {
   );
 }
 
-export default function DonorPortal() {
+export default function DonorPortal({ setUserId }) {
   return (
     <Routes>
-      <Route index element={<DonorLookup />} />
+      <Route index element={<DonorLookup setUserId={setUserId} />} />
       <Route path="register" element={<DonorRegister />} />
     </Routes>
   );

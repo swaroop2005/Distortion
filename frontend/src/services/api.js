@@ -41,3 +41,38 @@ export const getMobilization = () => request('/supply/mobilization');
 // Chatbot
 export const sendChatMessage = (message, role = 'public', userId = null) =>
   request('/chat', { method: 'POST', body: JSON.stringify({ message, role, user_id: userId }) });
+
+// Community — blood requests
+export const createRequest = (data) =>
+  request('/community/requests', { method: 'POST', body: JSON.stringify(data) });
+export const getRequest = (requestId) => request(`/community/requests/${requestId}`);
+export const getRequestMatches = (requestId, limit = 20) =>
+  request(`/community/requests/${requestId}/matches?limit=${limit}`);
+
+// Community — connections (the mutual-accept handshake)
+export const sendConnection = (requestId, patientId, donorId) =>
+  request('/community/connections', {
+    method: 'POST',
+    body: JSON.stringify({ request_id: requestId, patient_id: patientId, donor_id: donorId }),
+  });
+export const respondConnection = (connectionId, donorId, action) =>
+  request(`/community/connections/${connectionId}/respond`, {
+    method: 'POST',
+    body: JSON.stringify({ donor_id: donorId, action }),
+  });
+export const cancelConnection = (connectionId, patientId) =>
+  request(`/community/connections/${connectionId}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify({ patient_id: patientId }),
+  });
+export const listConnections = (userId, role) =>
+  request(`/community/connections?user_id=${encodeURIComponent(userId)}&role=${role}`);
+
+// Community — private messages (only on accepted connections)
+export const getThread = (connectionId, userId) =>
+  request(`/community/connections/${connectionId}/messages?user_id=${encodeURIComponent(userId)}`);
+export const postMessage = (connectionId, senderId, text) =>
+  request(`/community/connections/${connectionId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ sender_id: senderId, text }),
+  });

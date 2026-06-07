@@ -1,8 +1,12 @@
-import { useState } from 'react';
-import { getPatient, createBridge } from '../../services/api';
+import { useState, useEffect } from 'react';
+import {
+  getPatient, createBridge,
+  createRequest, getRequestMatches, sendConnection, listConnections, cancelConnection,
+} from '../../services/api';
 import StatusBadge from '../../components/StatusBadge';
+import ConnectionChat from '../../components/ConnectionChat';
 
-export default function PatientPortal() {
+export default function PatientPortal({ userId, setUserId }) {
   const [patientId, setPatientId] = useState('');
   const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -16,6 +20,7 @@ export default function PatientPortal() {
     try {
       const p = await getPatient(patientId.trim());
       setPatient(p);
+      if (setUserId) setUserId(p.user_id);
     } catch (e) {
       setError(e.message);
       setPatient(null);
@@ -150,8 +155,155 @@ export default function PatientPortal() {
               </div>
             )}
           </div>
+          <PatientConnect patient={patient} />
         </>
       )}
+    </div>
+  );
+}
+
+function PatientConnect({ patient }) {
+  const pid = patient.user_id;
+  const GROUPS = ['O Positive', 'O Negative', 'A Positive', 'A Negative', 'B Positive', 'B Negative', 'AB Positive', 'AB Negative'];
+  const [form, setForm] = useState({ blood_group: patient.blood_group || 'O Positive', city: 'Hyderabad', units_required: 2, need_by: '' });
+  const [request, setRequest] = useState(null);
+  const [matches, setMatches] = useState([]);
+  const [connections, setConnections] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
+
+  const refreshConnections = async () => {
+    try {
+      const r = await listConnections(pid, 'patient');
+      setConnections(r.connections || []);
+    } catch (_) { /* ignore */ }
+  };
+
+  useEffect(() => { refreshConnections(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [pid]);
+
+  const submitRequest = async (e) => {
+    e.preventDefault();
+    setBusy(true); setError(null); setNotice(null);
+    try {
+      const req = await createRequest({
+        patient_id: pid,
+        blood_group: form.blood_group,
+        city: form.city,
+        units_required: Number(form.units_required),
+        need_by: form.need_by,
+      });
+      setRequest(req);
+      const m = await getRequestMatches(req.request_id, 20);
+      setMatches(m.matches || []);
+    } catch (e) { setError(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const connect = async (donorId) => {
+    try {
+      await sendConnection(request.request_id, pid, donorId);
+      setNotice(`Connection request sent to ${donorId}.`);
+      await refreshConnections();
+    } catch (e) { setError(e.message); }
+  };
+
+  const cancel = async (connId) => {
+    try { await cancelConnection(connId, pid); await refreshConnections(); }
+    catch (e) { setError(e.message); }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+      <h3 className="text-sm font-extrabold text-gray-900 mb-4">Request Blood &amp; Connect with Donors</h3>
+
+      <form onSubmit={submitRequest} className="grid grid-cols-2 gap-3 mb-4">
+        <div>
+          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Blood group</label>
+          <select value={form.blood_group} onChange={e => setForm({ ...form, blood_group: e.target.value })}
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            {GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">City</label>
+          <input value={form.city} onChange={e => setForm({ ...form, city: e.target.value })}
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Units</label>
+          <input type="number" min="1" value={form.units_required} onChange={e => setForm({ ...form, units_required: e.target.value })}
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Need by</label>
+          <input type="date" value={form.need_by} onChange={e => setForm({ ...form, need_by: e.target.value })} required
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+        </div>
+        <div className="col-span-2">
+          <button type="submit" disabled={busy}
+            className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-rose-300 text-white font-bold text-sm transition-colors">
+            {busy ? 'Finding donors…' : 'Create Request & Find Compatible Donors'}
+          </button>
+        </div>
+      </form>
+
+      {error && <p className="text-sm text-rose-600 mb-2">{error}</p>}
+      {notice && <p className="text-sm text-emerald-600 mb-2">{notice}</p>}
+
+      {request && (
+        <div className="mb-4">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+            {matches.length} compatible donor{matches.length === 1 ? '' : 's'} found
+          </p>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {matches.map(m => (
+              <div key={m.donor_id} className="flex items-center justify-between border border-gray-100 rounded-xl p-3">
+                <div className="text-sm">
+                  <span className="font-mono text-xs font-bold text-gray-700">{m.donor_id}</span>
+                  <span className="ml-2 text-gray-500">{m.blood_group}</span>
+                  <span className="ml-2 text-xs text-gray-400">
+                    {m.distance_km != null ? `${m.distance_km} km` : 'distance n/a'} ·{' '}
+                    {m.eligible ? 'eligible now' : `eligible in ${m.days_until_eligible}d`}
+                  </span>
+                </div>
+                <button onClick={() => connect(m.donor_id)}
+                  className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors">
+                  Connect
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">My Connections</p>
+          <button onClick={refreshConnections} className="text-[11px] font-bold text-rose-600 hover:text-rose-700">Refresh</button>
+        </div>
+        {connections.length === 0 ? (
+          <p className="text-xs text-gray-400">No connection requests yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {connections.map(c => (
+              <div key={c.connection_id} className="border border-gray-100 rounded-xl p-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs font-bold text-gray-700">{c.donor_id}</span>
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={c.status} />
+                    {(c.status === 'pending' || c.status === 'accepted') && (
+                      <button onClick={() => cancel(c.connection_id)}
+                        className="text-[11px] font-bold text-gray-400 hover:text-rose-600">Cancel</button>
+                    )}
+                  </div>
+                </div>
+                {c.status === 'accepted' && <ConnectionChat connectionId={c.connection_id} selfId={pid} />}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
