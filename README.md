@@ -78,6 +78,7 @@ requirements.txt  Python dependencies
 
 ---
 
-## Team
+## Team - Distortion
 
 - Swaroop Chandra Ponnada
+- Medi Harshith Kumar
