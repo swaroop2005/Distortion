@@ -1,19 +1,8 @@
-<<<<<<< HEAD
-"""Admin routes — dashboard aggregations, bridge health, churn alerts, supply KPIs."""
-=======
 """Admin routes — RBAC-protected CRUD operations, analytics, alerts, bridge management."""
->>>>>>> origin/main
 from __future__ import annotations
 
 from typing import Optional
 
-<<<<<<< HEAD
-from ..bridge import all_bridges, bridge_health_summary
-from ..compat import normalize_blood_group
-from ..eligibility import is_eligible
-from ..store import all_donors, all_patients
-from ..supply_store import national_kpis, shortage_report
-=======
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
@@ -21,7 +10,6 @@ from ..services.bridge import all_bridges, bridge_health_summary, get_bridge, he
 from ..utils.compat import normalize_blood_group
 from ..utils.eligibility import is_eligible
 from ..services.store import all_donors, all_patients, get_donor, get_patient
->>>>>>> origin/main
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
