@@ -11,10 +11,11 @@ Key concepts:
   - Predictive bridge-break alarm: flag bridges likely to break soon (churn model)
   - No-show buffer: if top donor has low responsiveness, pre-rank a backup
 
-Stores bridges in-memory for local dev; DynamoDB swap in Phase 5.
+Stores bridges in-memory for local dev; set THALNET_DB=dynamodb for persistence.
 """
 from __future__ import annotations
 
+import os
 import uuid
 from dataclasses import dataclass, field
 from datetime import date, timedelta
@@ -23,6 +24,28 @@ from typing import Optional
 from ..utils.eligibility import days_until_eligible, is_eligible
 from .matching import rank_donors
 from .store import get_donor, get_patient
+
+USE_DYNAMO = os.getenv("THALNET_DB", "").lower() == "dynamodb"
+
+
+def _dynamo_save(bridge_dict: dict):
+    if not USE_DYNAMO:
+        return
+    try:
+        from . import db
+        db.put_bridge(bridge_dict["bridge_id"], bridge_dict)
+    except Exception:
+        pass  # never crash on persistence failure — in-memory is source of truth
+
+
+def _dynamo_load_all() -> list[dict]:
+    if not USE_DYNAMO:
+        return []
+    try:
+        from . import db
+        return db.scan_bridges()
+    except Exception:
+        return []
 
 TARGET_BRIDGE_SIZE = 8
 MAX_BRIDGE_SIZE = 10
@@ -179,6 +202,7 @@ def build_bridge(
     )
 
     _bridges[bridge.bridge_id] = bridge
+    _dynamo_save(bridge.to_dict())
     return bridge.to_dict()
 
 
@@ -231,12 +255,21 @@ def heal_bridge(bridge_id: str, *, ref_date: Optional[date] = None) -> dict:
     bridge.integrity = _compute_integrity(len(active), bridge.coverage_days)
     bridge.alarms = _check_alarms(bridge.donors)
 
+    _dynamo_save(bridge.to_dict())
     return bridge.to_dict()
 
 
 def get_bridge(bridge_id: str) -> Optional[dict]:
     b = _bridges.get(bridge_id)
-    return b.to_dict() if b else None
+    if b:
+        return b.to_dict()
+    if USE_DYNAMO:
+        try:
+            from . import db
+            return db.get_bridge(bridge_id)
+        except Exception:
+            pass
+    return None
 
 
 def patient_bridges(patient_id: str) -> list[dict]:
@@ -246,7 +279,11 @@ def patient_bridges(patient_id: str) -> list[dict]:
 
 
 def all_bridges() -> list[dict]:
-    return [b.to_dict() for b in _bridges.values()]
+    mem = [b.to_dict() for b in _bridges.values()]
+    if USE_DYNAMO and not mem:
+        # cold start — return persisted bridges if memory is empty
+        return _dynamo_load_all()
+    return mem
 
 
 def bridge_health_summary() -> dict:
