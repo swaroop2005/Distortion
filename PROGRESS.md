@@ -146,10 +146,15 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
   Carrier screening already exists → correctly cut.
 
 ## Daily log (newest first)
+### 2026-06-07 (session 8)
+- **✅ BloodBridge radial viz** — SVG-based radial map: patient node center, 8 donor nodes in orbit, color-coded by status (confirmed/scheduled/awaiting/resting/lapsed/open), completeness arc ring, thin connection lines, click-donor popover with self-heal button. 693 lines. Replaces flat grid in PatientPortal. — _Claude_
+- **✅ SignUpFlow wizard** — Role picker (Patient/Donor/Admin 3 cards) + 4-step patient wizard + 3-step donor wizard. Blood group grid, location, health check toggles, success screens. "Sign Up" button on landing triggers this. Admin card → direct to dashboard. — _Claude_
+- **✅ Admin dark sidebar + Donors/Patients pages** — Sidebar now `#16171c` matching HTML mockup. New Donors page: search/filter/churn bars, reads live `/admin/donors`. New Patients page: bridge integrity badges, reads `/admin/patients`. — _Claude_
+- **⚠️ SignUpFlow backend not wired** — Wizard collects form data but submit just routes to demo portal. Donor registration: `POST /donors/register` exists and needs wiring. Patient registration needs new endpoint. — _Next_
+
 ### 2026-06-07 (session 7)
 - **✅ Admin page crash fixed** — Root cause: `/admin/bridges` returns `{total, bridges:[]}` but `getBridges()` in `api.js` returned the whole dict; `BridgeBoard.filter()` crashed on a non-array. Fixed: `getBridges()` now extracts `.bridges` array. Rebuilt dist with `VITE_API_URL=http://100.48.60.79:8000`, deployed via rsync. — _Claude_
 - **✅ Frontend serve fixed** — Was binding to `localhost` only (not externally accessible). Now running in detached `screen` session using full node path. `http://100.48.60.79:3000` returns 200 confirmed. — _Claude_
-- **⚠️ Next: open http://100.48.60.79:3000 → click Admin → confirm dashboard loads without white screen.** — _Next_
 
 ### 2026-06-07 (session 6)
 - **✅ Chatbot — situational advice, learning loop, direct/calm tone** — `knowledge.py`: 14 → 28 FAQ entries, added 12 situational pre-donation scenarios (sleep deprivation, cold/flu/fever, medication, needle fear, alcohol, dehydration, heavy meal, tattoo/piercing, menstruation, low hemoglobin, diabetes/BP, general want-to-donate). Added `learn_faq()` (admin pushes new Q&A → saved to `data/chatbot_learned_faqs.json`), `log_unanswered()` (fallbacks written to `data/chatbot_unanswered.jsonl`), `get_unanswered()`, `lookup()` now searches static + learned FAQ. `chatbot.py`: added `_situational_advice` handler with 12-entry `_SITUATIONAL_MAP` (specific conditions ordered before generic); `_is_situational()` pre-dispatch override so condition queries beat keyword classifier; `_norm()` strips apostrophes for "havent"/"cant" matching; fallback queries auto-logged. `outreach.py`: added `situational_advice` intent block (30+ keywords); `compose_chat_reply` rewritten to direct/calm tone (no "Great news!" filler, facts first, shorter clean templates). `chat.py` router: added `POST /chat/learn` + `GET /chat/unanswered` admin endpoints. `data/chatbot_learned_faqs.json` seeded. All 14 smoke tests pass. — _Claude_
