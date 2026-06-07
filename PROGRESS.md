@@ -10,7 +10,7 @@ something so we both always know the state of play. Newest entries at the top of
 
 ## Current status
 
-🟡 **EC2 LIVE, Bedrock LIVE, frontend blank-screen bug open.**
+🟡 **EC2 LIVE, DynamoDB LIVE, Step Functions LIVE. Frontend serve keeps dying (use restart cmd). Admin page may still crash — open browser console to read error.**
 - EC2: `http://100.48.60.79` (port 80 dead, use **port 3000**)
 - Frontend: `http://100.48.60.79:3000` — React app served via `serve -s dist -l 3000`
 - Backend: `http://100.48.60.79:8000` — FastAPI + uvicorn, `THALNET_LLM_BACKEND=bedrock`
@@ -146,6 +146,15 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
   Carrier screening already exists → correctly cut.
 
 ## Daily log (newest first)
+### 2026-06-07 (session 5)
+- **✅ DynamoDB LIVE** — 5 tables created (ThalNet-Users/Bridges/Requests/Conversations/Outcomes), 6946 users seeded from clean.csv. ThalNet-EC2-Bedrock role has DynamoDBFullAccess. — _Claude_
+- **✅ Step Functions LIVE** — `ThalNet-OutreachLoop` state machine created (arn:aws:states:us-east-1:174581551371:stateMachine:ThalNet-OutreachLoop). 3-agent loop: Triage→OutreachBatch→Escalate→LearnAndClose. — _Claude_
+- **✅ Bridge persistence** — bridge.py writes to DynamoDB when `THALNET_DB=dynamodb`. Cold-start reload from DynamoDB. — _Claude_
+- **✅ Frontend rebuilt** — new dist with error boundary pushed to EC2. Serve running on port 3000 (restart cmd below if it dies). — _Claude_
+- **⚠️ Admin page crash** — still unconfirmed. Open http://100.48.60.79:3000, click Admin, look for red error box OR open browser console (F12→Console) and paste error here. — _Next_
+- **⚠️ Frontend serve dies on SSH disconnect** — restart: `ssh -i ~/Downloads/launch1.pem -tt ec2-user@100.48.60.79 "export NVM_DIR=\$HOME/.nvm && source \$NVM_DIR/nvm.sh && pkill -f 'serve -s' 2>/dev/null; nohup serve -s /home/ec2-user/Distortion/frontend/dist -l 3000 &>/tmp/frontend.log & disown && sleep 2 && cat /tmp/frontend.log"` — _Claude_
+- **Real account ID**: 174581551371 (not 209556026518 from memory — that was wrong)
+
 ### 2026-06-07 (session 4)
 - **✅ IAM role created + attached** — `ThalNet-EC2-Bedrock` (BedrockFullAccess) created via AWS CLI (`~/aws-cli-install/aws-cli/aws`), attached to instance `i-0de8eb69a379a6e08`. No sudo needed — CLI installed to `~/aws-cli-install/` without system install. — _Claude_
 - **✅ Bedrock model ID fixed** — `anthropic.claude-haiku-4-5` → `us.anthropic.claude-haiku-4-5-20251001-v1:0` (inference profile required for on-demand; bare model ID rejected). Chat endpoint returns real AI responses. — _Claude_
