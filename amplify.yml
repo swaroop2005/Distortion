@@ -1,0 +1,27 @@
+version: 1
+applications:
+  - frontend:
+      phases:
+        preBuild:
+          commands:
+            - cd frontend
+            - npm ci
+        build:
+          commands:
+            - npm run build
+        postBuild:
+          commands:
+            - echo "Build complete"
+      artifacts:
+        baseDirectory: frontend/dist
+        files:
+          - "**/*"
+      cache:
+        paths:
+          - frontend/node_modules/**/*
+      buildSpec: |-
+        VITE_API_URL: https://YOUR_API_GATEWAY_URL
+      environment:
+        variables:
+          VITE_API_URL: https://YOUR_API_GATEWAY_URL
+    appRoot: .

@@ -10,13 +10,14 @@ something so we both always know the state of play. Newest entries at the top of
 
 ## Current status
 
-🟢 **Building LIVE — two halves merged into ONE system.** Vijetha's `optimizer/` + `project/`
-(supply side) merged into branch `scaffold-and-design` alongside ThalNet (donor/coordination
-side). **Direction = 2-layer system:** Layer 1 Supply Command Center (predict shortage + optimize
-+ mobilization plan + dashboard, BUILT) → seam (`mobilization_plan.csv`) → Layer 2 ThalNet
-autonomous coordination. **Real national e-RaktKosh data now in repo** (3,863 banks, 44,675 rows)
-→ kills the "tiny dataset" weakness. **Blocker:** Bedrock Haiku access + AWS budget alarm not yet
-confirmed — long pole.
+🟢 **EC2 LIVE, DynamoDB LIVE, Step Functions LIVE, Bedrock LIVE. Frontend running in screen session (survives SSH disconnect). Admin page crash fixed — verify by opening http://100.48.60.79:3000.**
+- EC2: `http://100.48.60.79` (port 80 dead, use **port 3000**)
+- Frontend: `http://100.48.60.79:3000` — React app served via `serve -s dist -l 3000`
+- Backend: `http://100.48.60.79:8000` — FastAPI + uvicorn, `THALNET_LLM_BACKEND=bedrock`
+- Bedrock: **LIVE** — `us.anthropic.claude-haiku-4-5-20251001-v1:0` (inference profile, required)
+- IAM role `ThalNet-EC2-Bedrock` attached to EC2 (BedrockFullAccess)
+- SSH key: `~/Downloads/launch1.pem` · AWS CLI at `~/aws-cli-install/aws-cli/aws`
+- **OPEN BUG:** Admin dashboard shows blank white screen after clicking Admin on landing page. Error boundary added to App.jsx to catch + display crash. Next step: load page, read the red error box, fix root cause.
 
 ## Locked scope (this session)
 **Flagship = Auto-Bridge Builder** (8→1 bridge: auto-form + eligibility-stagger + self-heal +
@@ -145,6 +146,40 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
   Carrier screening already exists → correctly cut.
 
 ## Daily log (newest first)
+### 2026-06-07 (session 8)
+- **✅ BloodBridge radial viz** — SVG-based radial map: patient node center, 8 donor nodes in orbit, color-coded by status (confirmed/scheduled/awaiting/resting/lapsed/open), completeness arc ring, thin connection lines, click-donor popover with self-heal button. 693 lines. Replaces flat grid in PatientPortal. — _Claude_
+- **✅ SignUpFlow wizard** — Role picker (Patient/Donor/Admin 3 cards) + 4-step patient wizard + 3-step donor wizard. Blood group grid, location, health check toggles, success screens. "Sign Up" button on landing triggers this. Admin card → direct to dashboard. — _Claude_
+- **✅ Admin dark sidebar + Donors/Patients pages** — Sidebar now `#16171c` matching HTML mockup. New Donors page: search/filter/churn bars, reads live `/admin/donors`. New Patients page: bridge integrity badges, reads `/admin/patients`. — _Claude_
+- **⚠️ SignUpFlow backend not wired** — Wizard collects form data but submit just routes to demo portal. Donor registration: `POST /donors/register` exists and needs wiring. Patient registration needs new endpoint. — _Next_
+
+### 2026-06-07 (session 7)
+- **✅ Admin page crash fixed** — Root cause: `/admin/bridges` returns `{total, bridges:[]}` but `getBridges()` in `api.js` returned the whole dict; `BridgeBoard.filter()` crashed on a non-array. Fixed: `getBridges()` now extracts `.bridges` array. Rebuilt dist with `VITE_API_URL=http://100.48.60.79:8000`, deployed via rsync. — _Claude_
+- **✅ Frontend serve fixed** — Was binding to `localhost` only (not externally accessible). Now running in detached `screen` session using full node path. `http://100.48.60.79:3000` returns 200 confirmed. — _Claude_
+
+### 2026-06-07 (session 6)
+- **✅ Chatbot — situational advice, learning loop, direct/calm tone** — `knowledge.py`: 14 → 28 FAQ entries, added 12 situational pre-donation scenarios (sleep deprivation, cold/flu/fever, medication, needle fear, alcohol, dehydration, heavy meal, tattoo/piercing, menstruation, low hemoglobin, diabetes/BP, general want-to-donate). Added `learn_faq()` (admin pushes new Q&A → saved to `data/chatbot_learned_faqs.json`), `log_unanswered()` (fallbacks written to `data/chatbot_unanswered.jsonl`), `get_unanswered()`, `lookup()` now searches static + learned FAQ. `chatbot.py`: added `_situational_advice` handler with 12-entry `_SITUATIONAL_MAP` (specific conditions ordered before generic); `_is_situational()` pre-dispatch override so condition queries beat keyword classifier; `_norm()` strips apostrophes for "havent"/"cant" matching; fallback queries auto-logged. `outreach.py`: added `situational_advice` intent block (30+ keywords); `compose_chat_reply` rewritten to direct/calm tone (no "Great news!" filler, facts first, shorter clean templates). `chat.py` router: added `POST /chat/learn` + `GET /chat/unanswered` admin endpoints. `data/chatbot_learned_faqs.json` seeded. All 14 smoke tests pass. — _Claude_
+
+### 2026-06-07 (session 5)
+- **✅ DynamoDB LIVE** — 5 tables created (ThalNet-Users/Bridges/Requests/Conversations/Outcomes), 6946 users seeded from clean.csv. ThalNet-EC2-Bedrock role has DynamoDBFullAccess. — _Claude_
+- **✅ Step Functions LIVE** — `ThalNet-OutreachLoop` state machine created (arn:aws:states:us-east-1:174581551371:stateMachine:ThalNet-OutreachLoop). 3-agent loop: Triage→OutreachBatch→Escalate→LearnAndClose. — _Claude_
+- **✅ Bridge persistence** — bridge.py writes to DynamoDB when `THALNET_DB=dynamodb`. Cold-start reload from DynamoDB. — _Claude_
+- **✅ Frontend rebuilt** — new dist with error boundary pushed to EC2. Serve running on port 3000 (restart cmd below if it dies). — _Claude_
+- **⚠️ Admin page crash** — still unconfirmed. Open http://100.48.60.79:3000, click Admin, look for red error box OR open browser console (F12→Console) and paste error here. — _Next_
+- **⚠️ Frontend serve dies on SSH disconnect** — restart: `ssh -i ~/Downloads/launch1.pem -tt ec2-user@100.48.60.79 "export NVM_DIR=\$HOME/.nvm && source \$NVM_DIR/nvm.sh && pkill -f 'serve -s' 2>/dev/null; nohup serve -s /home/ec2-user/Distortion/frontend/dist -l 3000 &>/tmp/frontend.log & disown && sleep 2 && cat /tmp/frontend.log"` — _Claude_
+- **Real account ID**: 174581551371 (not 209556026518 from memory — that was wrong)
+
+### 2026-06-07 (session 4)
+- **✅ IAM role created + attached** — `ThalNet-EC2-Bedrock` (BedrockFullAccess) created via AWS CLI (`~/aws-cli-install/aws-cli/aws`), attached to instance `i-0de8eb69a379a6e08`. No sudo needed — CLI installed to `~/aws-cli-install/` without system install. — _Claude_
+- **✅ Bedrock model ID fixed** — `anthropic.claude-haiku-4-5` → `us.anthropic.claude-haiku-4-5-20251001-v1:0` (inference profile required for on-demand; bare model ID rejected). Chat endpoint returns real AI responses. — _Claude_
+- **✅ Frontend fixed: VITE_API_URL** — Build was baking `localhost` as API base. Fixed: always build on EC2 with `VITE_API_URL="http://100.48.60.79:8000"`, or rsync local dist built with same var. — _Claude_
+- **✅ Frontend port 3000** — Port 80 needs sudo (no tty in SSH). Frontend now served on 3000. Security group opened for 3000 via CLI. — _Claude_
+- **✅ Admin dashboard redesigned** — NavBar → navy gradient (`#0a2540→#13355c`) matching `dashboard.html`. Sidebar navy + red active state + blood drop SVG. KPI cards → dashboard.html `.kpi` style (26px bold, `alert/warn/good` color tones, uppercase labels). Background `#eef2f7`. — _Claude_
+- **⚠️ OPEN BUG: Admin blank screen** — After clicking Admin on landing, dashboard shows white. Error boundary added to `App.jsx` (red error box on crash). Next session: restart serve, load page, read error message, fix root cause. Backend all 200 OK — issue is React render crash. — _Claude_
+
+### 2026-06-07 (session 3)
+- **✅ Bedrock Haiku 4.5 wired to EC2** — Updated `backend/app/services/outreach.py` model_id from retired `anthropic.claude-3-haiku-20240307-v1:0` → `anthropic.claude-haiku-4-5` ($1/$5 per 1M tokens, cheapest active model). Chatbot (`services/chatbot.py`) auto-uses same LLM via shared `get_llm()` — no extra wiring needed. Fixed `backend/app/main.py` wrong import (`from .store` → `from .services.store`). Created missing `backend/__init__.py`. Deployed to EC2 with `THALNET_LLM_BACKEND=bedrock`. **Pending:** attach IAM role with BedrockFullAccess to EC2 instance (Vijetha via AWS Console) → then verify with `POST /chat`. — _Claude_
+- **✅ Swaroop's session-2 redesign pulled + deployed** — Synced latest code from main (Swaroop's ThalNet design system redesign). `frontend/src/design.jsx` + rewritten App.jsx, Navbar, dashboards. Built on EC2 (37 modules, 0 errors). Frontend serving at `http://100.48.60.79`. — _Claude_
+
 ### 2026-06-07 (session 2)
 - **✅ React frontend fully redesigned to match ThalNet HTML design quality** — 9 files rewritten. Added Plus Jakarta Sans + IBM Plex Mono + Material Symbols Rounded fonts. Created `frontend/src/design.jsx` with shared primitives (Icon, Card, Btn, Badge, Eyebrow, IntegrityBadge, Spinner, ErrBox). LandingPage: hero + stats + "how it works" + RoleCards + dark footer. AdminDashboard: dark sidebar (220px, #16171c) + command center dark header + 6-col KPI grid + blood-group bars + bridge health — sidebar uses React Router Links with active state; admin gets NO top Navbar/ChatWidget. PatientPortal: styled centered ID input (auth-modal style, demo IDs, icon-prefixed input) → PatientView with transfusion headline card, bridge viz (8 donor circles, color-coded), timeline, urgent modal. DonorPortal: styled ID input → DonorView with clock hero (green/dark card), connection inbox matching DonorView design, quiet impact section. Navbar redesigned with Material Symbols + CSS vars. Vite build: ✓ 0 errors, 37 modules. — _Claude_
 

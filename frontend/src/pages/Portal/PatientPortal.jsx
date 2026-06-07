@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import {
-  getPatient, createBridge,
+  getPatient, createBridge, healBridge,
   createRequest, getRequestMatches, sendConnection, listConnections, cancelConnection,
 } from '../../services/api';
 import { Icon, Card, Btn, Badge, Eyebrow, IntegrityBadge, Spinner, ErrBox } from '../../design';
 import StatusBadge from '../../components/StatusBadge';
 import ConnectionChat from '../../components/ConnectionChat';
+import BloodBridge from '../../components/BloodBridge';
 
 /* ── ID input screen ─────────────────────────────────────── */
 function IdInputScreen({ onLookup, loading, error }) {
@@ -77,23 +78,21 @@ function IdInputScreen({ onLookup, loading, error }) {
   );
 }
 
-/* ── Bridge visualization ─────────────────────────────────── */
-function BridgeViz({ donors = [], target = 8 }) {
-  const slots = Array(target).fill(null).map((_, i) => donors[i] || null);
+/* ── Bridge visualization — use radial BloodBridge ────────── */
+function BridgeViz({ donors = [], target = 8, patient, onHeal }) {
+  const bridgeDonors = donors.map(d => ({
+    id: d.user_id || d.id,
+    name: d.user_id || 'Donor',
+    initials: (d.user_id || 'D').slice(0, 2).toUpperCase(),
+    status: d.eligible === false ? 'resting' : 'confirmed',
+    blood_group: d.blood_group,
+  }));
   return (
-    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-      {slots.map((d, i) => (
-        <div key={i} style={{
-          width: 46, height: 46, borderRadius: 13,
-          background: d ? (d.eligible !== false ? 'var(--green-100)' : 'var(--amber-50)') : 'var(--bg)',
-          border: `1.5px solid ${d ? (d.eligible !== false ? 'var(--green-100)' : 'var(--amber-100)') : 'var(--line)'}`,
-          display: 'grid', placeItems: 'center',
-        }}>
-          <Icon name="person" size={24} fill
-            color={d ? (d.eligible !== false ? 'var(--green-600)' : 'var(--amber-600)') : 'var(--faint)'} />
-        </div>
-      ))}
-    </div>
+    <BloodBridge
+      patient={{ name: patient?.user_id || 'Patient', blood_group: patient?.blood_group || '—', target_size: target }}
+      donors={bridgeDonors}
+      onHeal={onHeal}
+    />
   );
 }
 
@@ -170,19 +169,7 @@ function PatientView({ patient, patientId, onBuildBridge, building }) {
 
           {topBridge ? (
             <>
-              <BridgeViz donors={topBridge.donors || []} target={target} />
-              <div style={{ borderTop: '1px solid var(--line)', marginTop: 16, paddingTop: 16, display: 'flex', gap: 14, textAlign: 'center' }}>
-                {[
-                  { v: donorCount, l: 'Donors in bridge' },
-                  { v: target, l: 'Target size' },
-                  { v: topBridge.integrity || '—', l: 'Status' },
-                ].map((s, i) => (
-                  <div key={i} style={{ flex: 1 }}>
-                    <div className="tnum" style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.03em', color: 'var(--ink)' }}>{s.v}</div>
-                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3 }}>{s.l}</div>
-                  </div>
-                ))}
-              </div>
+              <BridgeViz donors={topBridge.donors || []} target={target} patient={patient} onHeal={() => healBridge(topBridge.bridge_id).catch(() => {})} />
             </>
           ) : (
             <div style={{ textAlign: 'center', padding: '32px 0' }}>

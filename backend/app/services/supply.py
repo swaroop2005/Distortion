@@ -17,7 +17,7 @@ from __future__ import annotations
 import csv
 import functools
 import os
-from typing import Optional
+from typing import Optional  # already imported
 
 HERE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 STOCK_CSV = os.path.join(HERE, "data", "blood_stock_long.csv")
@@ -185,28 +185,48 @@ def mobilization_queue() -> list[dict]:
     return rows
 
 
+def _nearest_district(lat: float, lng: float) -> str:
+    """Find the Telangana district centroid nearest to a coordinate pair."""
+    best, best_dist = "Hyderabad", float("inf")
+    for district, centroid in TELANGANA_CENTROIDS.items():
+        d = haversine_km((lat, lng), centroid)
+        if d < best_dist:
+            best_dist = d
+            best = district
+    return best
+
+
 def patient_map_data(
     patient_group: str,
     patient_district: str = "Hyderabad",
+    patient_lat: Optional[float] = None,
+    patient_lng: Optional[float] = None,
 ) -> dict:
     """All data needed for the patient map view."""
     from .store import donors_df, patients_df
     from ..utils.compat import normalize_blood_group, compatible_donors_mask
     from ..utils.eligibility import is_eligible
 
+    # Derive district from coordinates if provided
+    if patient_lat is not None and patient_lng is not None:
+        patient_district = _nearest_district(patient_lat, patient_lng)
+
     p_norm = normalize_blood_group(patient_group)
     donors = donors_df()
     patients = patients_df()
 
-    # Count active compatible donors in region
     compat_groups = compatible_donors_mask(patient_group)
     compat_donors = donors[
         donors["blood_group"].apply(normalize_blood_group).isin(compat_groups)
     ]
     eligible_compat = sum(1 for _, d in compat_donors.iterrows() if is_eligible(d.to_dict()))
 
-    # Nearby banks with stock
     banks = nearby_compatible_banks(patient_group, patient_district)
+    # Attach coordinates to each bank using district centroids
+    for bank in banks:
+        centroid = TELANGANA_CENTROIDS.get(bank.get("district", ""))
+        bank["lat"] = centroid[0] if centroid else None
+        bank["lng"] = centroid[1] if centroid else None
 
     return {
         "patient_blood_group": p_norm,

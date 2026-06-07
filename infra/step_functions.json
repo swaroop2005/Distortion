@@ -1,0 +1,164 @@
+{
+  "Comment": "ThalNet 3-Agent Outreach Loop: Triage → Outreach → Escalate+Learn",
+  "StartAt": "Triage",
+  "States": {
+    "Triage": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "thalnet-api",
+        "Payload": {
+          "path": "/agent/transfusion-due/$$.Execution.Input.patient_id",
+          "httpMethod": "POST",
+          "body.$": "States.JsonToString($.request)"
+        }
+      },
+      "ResultPath": "$.triage",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.TooManyRequestsException"],
+          "IntervalSeconds": 3,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "HasDonors"
+    },
+
+    "HasDonors": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.triage.Payload.donor_count",
+          "NumericGreaterThan": 0,
+          "Next": "OutreachBatch"
+        }
+      ],
+      "Default": "Escalate"
+    },
+
+    "OutreachBatch": {
+      "Type": "Map",
+      "ItemsPath": "$.triage.Payload.donors",
+      "MaxConcurrency": 3,
+      "Iterator": {
+        "StartAt": "ContactDonor",
+        "States": {
+          "ContactDonor": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Parameters": {
+              "FunctionName": "thalnet-api",
+              "Payload": {
+                "path": "/agent/contact",
+                "httpMethod": "POST",
+                "body.$": "States.JsonToString($)"
+              }
+            },
+            "ResultPath": "$.contact",
+            "Next": "WaitForReply"
+          },
+          "WaitForReply": {
+            "Type": "Wait",
+            "Seconds": 86400,
+            "Next": "InterpretReply"
+          },
+          "InterpretReply": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Parameters": {
+              "FunctionName": "thalnet-api",
+              "Payload": {
+                "path": "/agent/interpret-reply",
+                "httpMethod": "POST",
+                "body.$": "States.JsonToString($)"
+              }
+            },
+            "ResultPath": "$.reply",
+            "Next": "DonorDecision"
+          },
+          "DonorDecision": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Variable": "$.reply.Payload.label",
+                "StringEquals": "accept",
+                "Next": "LogAccepted"
+              },
+              {
+                "Variable": "$.reply.Payload.label",
+                "StringEquals": "decline",
+                "Next": "LogDeclined"
+              }
+            ],
+            "Default": "LogDeclined"
+          },
+          "LogAccepted": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Parameters": {
+              "FunctionName": "thalnet-api",
+              "Payload": {
+                "path": "/agent/log-outcome",
+                "httpMethod": "POST",
+                "result": "accepted"
+              }
+            },
+            "End": true
+          },
+          "LogDeclined": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Parameters": {
+              "FunctionName": "thalnet-api",
+              "Payload": {
+                "path": "/agent/log-outcome",
+                "httpMethod": "POST",
+                "result": "declined"
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "ResultPath": "$.outreach_results",
+      "Next": "CheckCoverage"
+    },
+
+    "CheckCoverage": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.triage.Payload.bridge_integrity",
+          "StringEquals": "Full",
+          "Next": "LearnAndClose"
+        }
+      ],
+      "Default": "Escalate"
+    },
+
+    "Escalate": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-east-1:209556026518:ThalNet-Escalation",
+        "Message.$": "States.Format('Bridge incomplete for patient {}. Manual intervention needed.', $.request.patient_id)",
+        "Subject": "ThalNet: Bridge Escalation Required"
+      },
+      "Next": "LearnAndClose"
+    },
+
+    "LearnAndClose": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "thalnet-api",
+        "Payload": {
+          "path": "/agent/learning",
+          "httpMethod": "GET"
+        }
+      },
+      "End": true
+    }
+  }
+}
