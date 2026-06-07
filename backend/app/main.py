@@ -49,7 +49,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .routers import admin, agent, chat, connections, donors, patients, supply_routes
-from .store import all_patients
+from .services.store import all_patients
 from .services.bridge import build_bridge
 
 app = FastAPI(
