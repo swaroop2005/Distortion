@@ -80,12 +80,32 @@ def _one(df: pd.DataFrame, user_id: str) -> Optional[dict]:
     return None if hit.empty else hit.iloc[0].to_dict()
 
 
+def _short_id_row(df: pd.DataFrame, uid: str, prefix: str) -> Optional[dict]:
+    """Resolve PT-NNN / DN-NNN (1-indexed, case-insensitive) to a DataFrame row."""
+    ulow = uid.strip().upper()
+    pfx = prefix.upper() + "-"
+    if not ulow.startswith(pfx):
+        return None
+    try:
+        n = int(ulow[len(pfx):])
+    except ValueError:
+        return None
+    idx = n - 1
+    if idx < 0 or idx >= len(df):
+        return None
+    return df.iloc[idx].to_dict()
+
+
 def get_patient(user_id: str) -> Optional[dict]:
-    return _one(patients_df(), user_id)
+    pats = patients_df()
+    short = _short_id_row(pats, user_id, "PT")
+    return short if short is not None else _one(pats, user_id)
 
 
 def get_donor(user_id: str) -> Optional[dict]:
-    return _one(donors_df(), user_id)
+    dons = donors_df()
+    short = _short_id_row(dons, user_id, "DN")
+    return short if short is not None else _one(dons, user_id)
 
 
 def all_patients() -> list[dict]:
