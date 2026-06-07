@@ -15,7 +15,7 @@ async function request(path, options = {}) {
 // Admin
 export const getDashboard = () => request('/admin/dashboard');
 export const getSupplyOverview = () => request('/admin/supply-overview');
-export const getBridges = () => request('/admin/bridges');
+export const getBridges = () => request('/admin/bridges').then(d => Array.isArray(d) ? d : (d.bridges || []));
 export const getBridge = (id) => request(`/admin/bridges/${id}`);
 export const healBridge = (id) => request(`/admin/bridges/${id}/heal`, { method: 'POST' });
 export const getChurnAlerts = (threshold = 0.5) => request(`/admin/alerts/churn?threshold=${threshold}`);

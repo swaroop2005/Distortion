@@ -10,7 +10,7 @@ something so we both always know the state of play. Newest entries at the top of
 
 ## Current status
 
-🟡 **EC2 LIVE, DynamoDB LIVE, Step Functions LIVE. Frontend serve keeps dying (use restart cmd). Admin page may still crash — open browser console to read error.**
+🟢 **EC2 LIVE, DynamoDB LIVE, Step Functions LIVE, Bedrock LIVE. Frontend running in screen session (survives SSH disconnect). Admin page crash fixed — verify by opening http://100.48.60.79:3000.**
 - EC2: `http://100.48.60.79` (port 80 dead, use **port 3000**)
 - Frontend: `http://100.48.60.79:3000` — React app served via `serve -s dist -l 3000`
 - Backend: `http://100.48.60.79:8000` — FastAPI + uvicorn, `THALNET_LLM_BACKEND=bedrock`
@@ -146,6 +146,14 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
   Carrier screening already exists → correctly cut.
 
 ## Daily log (newest first)
+### 2026-06-07 (session 7)
+- **✅ Admin page crash fixed** — Root cause: `/admin/bridges` returns `{total, bridges:[]}` but `getBridges()` in `api.js` returned the whole dict; `BridgeBoard.filter()` crashed on a non-array. Fixed: `getBridges()` now extracts `.bridges` array. Rebuilt dist with `VITE_API_URL=http://100.48.60.79:8000`, deployed via rsync. — _Claude_
+- **✅ Frontend serve fixed** — Was binding to `localhost` only (not externally accessible). Now running in detached `screen` session using full node path. `http://100.48.60.79:3000` returns 200 confirmed. — _Claude_
+- **⚠️ Next: open http://100.48.60.79:3000 → click Admin → confirm dashboard loads without white screen.** — _Next_
+
+### 2026-06-07 (session 6)
+- **✅ Chatbot expanded — more intents, more FAQ, response variety** — `knowledge.py`: 4 → 14 grounded FAQ entries (added iron overload/chelation, carrier screening, blood type compatibility, donation process, side effects, emergency blood, registration/signup flow, what ThalNet does, India thalassemia stats, finding blood banks). `CHAT_INTENT_KEYWORDS` in `outreach.py`: added `registration` and `emergency` intent keyword groups; broadened coverage on all existing intents. `chatbot.py`: added `_registration` and `_emergency` handlers; extended fallthrough guard for both. `MockLLM.compose_chat_reply`: randomized greetings (Hi there/Hello/Hey/Namaste/Namaskaram), randomized response templates per intent (eligibility: 3 variants, bridge: integrity-aware phrases, stock: 2 variants, fallback: 3 variants, FAQ intros vary by language). Smoke tests pass. — _Claude_
+
 ### 2026-06-07 (session 5)
 - **✅ DynamoDB LIVE** — 5 tables created (ThalNet-Users/Bridges/Requests/Conversations/Outcomes), 6946 users seeded from clean.csv. ThalNet-EC2-Bedrock role has DynamoDBFullAccess. — _Claude_
 - **✅ Step Functions LIVE** — `ThalNet-OutreachLoop` state machine created (arn:aws:states:us-east-1:174581551371:stateMachine:ThalNet-OutreachLoop). 3-agent loop: Triage→OutreachBatch→Escalate→LearnAndClose. — _Claude_
