@@ -11,10 +11,35 @@ desktop.ini
 # --- Secrets / credentials (NEVER commit) ---
 .env
 .env.*
+.env.local
+.env.production
 *.pem
 *.key
+*.cer
+*.p12
+*.pfx
 credentials.json
 aws_credentials*
+.aws/
+*.secret
+*.secrets
+token.json
+secrets.yaml
+secrets.yml
+
+# --- AWS deploy artifacts ---
+samconfig.toml
+.aws-sam/
+cdk.out/
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+# --- IDE / local ---
+.idea/
+.vscode/
+*.swp
+*.swo
 
 # --- Python ---
 __pycache__/
