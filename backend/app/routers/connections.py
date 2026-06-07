@@ -23,7 +23,8 @@ def _guard(fn, *args, **kwargs):
     try:
         return fn(*args, **kwargs)
     except tuple(_HTTP) as e:
-        raise HTTPException(_HTTP[type(e)], str(e))
+        code = next(v for k, v in _HTTP.items() if isinstance(e, k))
+        raise HTTPException(code, str(e))
 
 
 class RequestIn(BaseModel):

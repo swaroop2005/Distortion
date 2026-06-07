@@ -72,9 +72,36 @@ def test_unknown_request_404():
     assert client.get("/community/requests/NOPE/matches").status_code == 404
 
 
+def test_duplicate_connection_409():
+    cs._reset()
+    p = _patient()
+    rid = client.post("/community/requests", json={
+        "patient_id": p["user_id"], "blood_group": p["blood_group"],
+        "city": "Hyderabad", "units_required": 1, "need_by": "2026-06-09"}).json()["request_id"]
+    donor_id = client.get(f"/community/requests/{rid}/matches").json()["matches"][0]["donor_id"]
+    body = {"request_id": rid, "patient_id": p["user_id"], "donor_id": donor_id}
+    assert client.post("/community/connections", json=body).status_code == 201
+    assert client.post("/community/connections", json=body).status_code == 409
+
+
+def test_cancel_endpoint_200():
+    cs._reset()
+    p = _patient()
+    rid = client.post("/community/requests", json={
+        "patient_id": p["user_id"], "blood_group": p["blood_group"],
+        "city": "Hyderabad", "units_required": 1, "need_by": "2026-06-09"}).json()["request_id"]
+    donor_id = client.get(f"/community/requests/{rid}/matches").json()["matches"][0]["donor_id"]
+    cid = client.post("/community/connections", json={
+        "request_id": rid, "patient_id": p["user_id"], "donor_id": donor_id}).json()["connection_id"]
+    r = client.post(f"/community/connections/{cid}/cancel", json={"patient_id": p["user_id"]})
+    assert r.status_code == 200 and r.json()["status"] == "cancelled"
+
+
 if __name__ == "__main__":
     test_full_flow()
     test_message_before_accept_400()
     test_non_participant_read_403()
     test_unknown_request_404()
+    test_duplicate_connection_409()
+    test_cancel_endpoint_200()
     print("test_connections_endpoint OK")
