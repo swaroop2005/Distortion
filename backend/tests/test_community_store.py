@@ -188,6 +188,59 @@ def test_cancel_accepted_connection():
     assert out["status"] == "cancelled"
 
 
+def _accepted_connection():
+    req, donor_id = _request_and_compatible_donor()
+    conn = cs.send_connection(req["request_id"], req["patient_id"], donor_id)
+    cs.respond_connection(conn["connection_id"], donor_id, "accept")
+    return req, donor_id, conn
+
+
+def test_message_roundtrip_after_accept():
+    req, donor_id, conn = _accepted_connection()
+    cid = conn["connection_id"]
+    cs.add_message(cid, req["patient_id"], "Hello, thank you for connecting!")
+    cs.add_message(cid, donor_id, "Happy to help.")
+    thread = cs.get_thread(cid, req["patient_id"])
+    assert [m["sender_role"] for m in thread] == ["patient", "donor"]
+    assert thread[0]["text"] == "Hello, thank you for connecting!"
+
+
+def test_message_before_accept_blocked():
+    req, donor_id = _request_and_compatible_donor()
+    conn = cs.send_connection(req["request_id"], req["patient_id"], donor_id)  # pending
+    try:
+        cs.add_message(conn["connection_id"], req["patient_id"], "hi")
+        assert False, "expected BadState"
+    except cs.BadState:
+        pass
+
+
+def test_message_after_decline_blocked():
+    req, donor_id = _request_and_compatible_donor()
+    conn = cs.send_connection(req["request_id"], req["patient_id"], donor_id)
+    cs.respond_connection(conn["connection_id"], donor_id, "decline")
+    try:
+        cs.add_message(conn["connection_id"], req["patient_id"], "hi")
+        assert False, "expected BadState"
+    except cs.BadState:
+        pass
+
+
+def test_non_participant_cannot_message_or_read():
+    req, donor_id, conn = _accepted_connection()
+    cid = conn["connection_id"]
+    try:
+        cs.add_message(cid, "STRANGER", "let me in")
+        assert False, "expected Forbidden"
+    except cs.Forbidden:
+        pass
+    try:
+        cs.get_thread(cid, "STRANGER")
+        assert False, "expected Forbidden"
+    except cs.Forbidden:
+        pass
+
+
 if __name__ == "__main__":
     test_create_and_get_request()
     test_create_request_unknown_patient()
@@ -207,4 +260,8 @@ if __name__ == "__main__":
     test_donor_declines()
     test_wrong_patient_cannot_cancel()
     test_cancel_accepted_connection()
+    test_message_roundtrip_after_accept()
+    test_message_before_accept_blocked()
+    test_message_after_decline_blocked()
+    test_non_participant_cannot_message_or_read()
     print("test_community_store OK")

@@ -217,3 +217,33 @@ def list_connections(user_id, role) -> list[dict]:
     if role == "donor":
         return [c for c in _connections.values() if c["donor_id"] == uid]
     return []
+
+
+# ── Private messages (only on accepted connections, only participants) ──────
+def add_message(connection_id, sender_id, text) -> dict:
+    """Append a message. Requires an accepted connection and a participant sender."""
+    conn = _connections.get(connection_id)
+    if not conn:
+        raise NotFound(f"connection {connection_id} not found")
+    if conn["status"] != "accepted":
+        raise BadState("conversation opens only after the connection is accepted")
+    sid = str(sender_id)
+    if sid == conn["patient_id"]:
+        role = "patient"
+    elif sid == conn["donor_id"]:
+        role = "donor"
+    else:
+        raise Forbidden("not a participant in this conversation")
+    msg = {"sender_id": sid, "sender_role": role, "text": text, "ts": _now()}
+    _messages.setdefault(connection_id, []).append(msg)
+    return msg
+
+
+def get_thread(connection_id, requester_id) -> list[dict]:
+    """Return the ordered message thread. Only the two participants may read it."""
+    conn = _connections.get(connection_id)
+    if not conn:
+        raise NotFound(f"connection {connection_id} not found")
+    if str(requester_id) not in (conn["patient_id"], conn["donor_id"]):
+        raise Forbidden("not a participant in this conversation")
+    return list(_messages.get(connection_id, []))
