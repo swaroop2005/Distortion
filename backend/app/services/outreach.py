@@ -398,13 +398,22 @@ class BedrockLLM:
 
     def classify_intent(self, text: str) -> dict:
         system = (
-            "Classify the user's message into exactly one intent label: "
-            "personal_eligibility, bridge_status, stock_lookup, general_faq, wellness, fallback. "
-            "personal_eligibility = when they can donate again; bridge_status = their "
-            "own bridge/donor squad; stock_lookup = blood availability at banks; "
-            "general_faq = general questions about thalassemia or donating; "
-            "wellness = diet, hydration, lifestyle, or emotional-wellbeing tips; fallback = "
-            "anything else. Reply with JSON only: {\"intent\": \"...\", \"confidence\": 0.0-1.0}. "
+            "Classify the user's message into exactly one intent label from this list: "
+            "personal_eligibility, bridge_status, stock_lookup, general_faq, wellness, "
+            "situational_advice, registration, emergency, fallback. "
+            "personal_eligibility = when they can donate again (eligibility window, 90 days). "
+            "bridge_status = their own bridge/donor squad status. "
+            "stock_lookup = blood availability at banks. "
+            "general_faq = general questions about thalassemia, blood donation facts, statistics. "
+            "wellness = diet, hydration, lifestyle, emotional-wellbeing tips. "
+            "situational_advice = donor has a specific pre-donation concern: tired/no sleep, "
+            "cold/fever/sick, on medication, scared of needles, drank alcohol, just ate, "
+            "got tattoo, on period, feeling weak, diabetic, blood pressure, wants to start donating. "
+            "registration = how to register, sign up, join Blood Warriors, what ThalNet does, "
+            "find a blood bank contact. "
+            "emergency = urgent/critical blood need right now. "
+            "fallback = anything else. "
+            "Reply with JSON only: {\"intent\": \"...\", \"confidence\": 0.0-1.0}. "
             "Handle English, Hindi, and Telugu."
         )
         import json
