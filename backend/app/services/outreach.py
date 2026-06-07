@@ -30,25 +30,74 @@ REPLY_LABELS = ["accept", "decline", "maybe", "later", "question"]
 CHAT_INTENT_KEYWORDS = {
     "personal_eligibility": [
         "eligible", "donate again", "when can i", "how often can i donate",
+        "can i donate", "am i eligible", "my eligibility", "next donation",
+        "donation clock", "when is my next", "how many days", "days until",
         "kab donate", "kitne din", "kab kar", "eppudu", "rojulu", "donate cheya",
     ],
     "bridge_status": [
         "my bridge", "bridge status", "how is my bridge", "my squad", "my donors",
-        "my patients", "bridge doing", "bridge looking",
+        "my patients", "bridge doing", "bridge looking", "bridge health",
+        "how many donors do i have", "is my bridge ok", "bridge integrity",
     ],
     "stock_lookup": [
         "available", "stock", "units", "blood bank", "near me", "in stock",
-        "is o+", "is a+", "is b+", "is ab+", "any blood",
+        "is o+", "is a+", "is b+", "is ab+", "any blood", "blood available",
+        "units available", "check stock", "blood supply", "find blood",
+        "blood in", "bank have", "how much blood",
     ],
     "general_faq": [
         "what is", "thalassemia", "thalassaemia", "how often", "transfusion",
         "who can donate", "blood bridge", "how many donors", "90 days",
+        "how does", "tell me about", "explain", "what happens", "side effect",
+        "iron overload", "chelation", "carrier", "hplc", "compatible",
+        "blood type", "universal donor", "how many patients", "statistics",
+        "india thalassemia", "donation process", "feel dizzy",
+    ],
+    "registration": [
+        "how to register", "register", "sign up", "join", "enroll",
+        "become a donor", "how do i volunteer", "new donor", "start donating",
+        "how to join", "what is thalnet", "how does thalnet work", "about thalnet",
+        "contact blood bank", "blood bank phone", "blood bank number", "nearest blood bank",
+        "where to donate", "find blood bank",
+    ],
+    "emergency": [
+        "emergency", "urgent", "need blood urgently", "blood now", "immediately",
+        "critical", "icu", "surgery", "blood for surgery", "help now",
+        "urgent need", "emergency request", "life threatening",
+    ],
+    "situational_advice": [
+        # sleep / fatigue
+        "haven't slept", "no sleep", "didn't sleep", "tired", "exhausted", "sleepy",
+        "sleep deprived", "lack of sleep", "bad night", "couldn't sleep",
+        # illness
+        "i have a cold", "i have flu", "i have fever", "feeling sick", "unwell",
+        "runny nose", "sore throat", "cough", "body ache", "feeling feverish",
+        # medication
+        "on medication", "taking medicine", "taking pills", "antibiotics",
+        "blood thinners", "anticoagulant", "can i donate on medication",
+        # nerves
+        "nervous", "scared of needles", "afraid", "needle phobia", "does it hurt",
+        "will it hurt", "pain during donation", "scared of blood",
+        # alcohol / food / hydration
+        "drank alcohol", "had a drink", "had beer", "hangover", "being drinking",
+        "just ate", "heavy meal", "big meal", "full stomach", "fatty food", "oily food",
+        "thirsty", "dehydrated", "should i drink water",
+        # body conditions
+        "got a tattoo", "tattooed", "tattoo", "piercing", "got pierced",
+        "on my period", "menstruating", "feel weak", "feeling weak", "anaemic",
+        "anemic", "low hemoglobin", "diabetic", "diabetes", "blood pressure",
+        "hypertension", "high bp",
+        # want to donate
+        "i want to donate", "i would like to donate", "thinking of donating",
+        "want to help", "interested in donating", "how do i donate",
+        "want to give blood", "planning to donate",
     ],
     "wellness": [
         "what should i eat", "what to eat", "diet", "food", "stay healthy",
         "feel better", "tips", "lifestyle", "take care", "advice", "healthy",
         "sad", "stress", "anxious", "lonely", "depress", "overwhelm",
-        "cope", "scared", "worried", "mental health",
+        "cope", "scared", "worried", "mental health", "emotional",
+        "hydration", "water", "nutrition", "vitamins", "exercise",
         "kya khana", "khana", "aahar", "emcomito", "ela undali",
     ],
 }
@@ -156,76 +205,110 @@ class MockLLM:
         return {"intent": best_intent, "confidence": confidence}
 
     def compose_chat_reply(self, facts: dict, tone_context: dict, lang: str) -> str:
-        greeting = {"en": "Hi there", "hi": "Namaste", "te": "Namaskaram"}.get(lang, "Hi there")
+        # Direct, calm tone — state the fact first, no filler openers.
+        greet = {"en": ["", ""], "hi": ["", ""], "te": ["", ""]}.get(lang, [""])
+
+        def _hi() -> str:
+            g = {"en": ["Hello.", "Hi."], "hi": ["Namaste.", "Namaskar."],
+                 "te": ["Namaskaram.", "Hello."]}.get(lang, ["Hello."])
+            return random.choice(g)
 
         if facts.get("note") == "no_record":
-            return (f"{greeting}! I couldn't find a record for that, so I can't share "
-                    "those details. If you've registered, double-check your ID and I'll "
-                    "be glad to help.")
-        if facts.get("note") == "wrong_role":
-            return (f"{greeting}! That information is part of a different view, so I'm "
-                    "not able to show it here — but I'm happy to help with what's "
-                    "available to you.")
-        if facts.get("note") == "need_location":
-            return (f"{greeting}! Tell me your district or city and I'll check which "
-                    "nearby blood banks have stock for you.")
+            return random.choice([
+                "No record found for that ID. Double-check your donor or patient ID and try again.",
+                "That ID doesn't match any record. If you registered recently, try again in a moment.",
+            ])
 
-        # Eligibility facts
+        if facts.get("note") == "wrong_role":
+            return random.choice([
+                "That information is available in a different role view. Ask me what I can help with here.",
+                "That section belongs to a different portal. Let me know what else you need.",
+            ])
+
+        if facts.get("note") == "need_location":
+            return random.choice([
+                "Share your district or city and I'll check which blood banks have stock nearby.",
+                "Which district are you in? I'll find the nearest banks with available stock.",
+            ])
+
+        # Eligibility
         if "days_until" in facts:
             if facts.get("eligible"):
-                body = ("Good news — you're eligible to donate right now. A patient "
-                        "nearby would be grateful whenever you're ready.")
+                body = random.choice([
+                    "You're eligible to donate now.",
+                    "Your 90-day window is clear — you can donate today.",
+                    "You're cleared to donate. A patient on your bridge may need you soon.",
+                ])
             else:
-                body = (f"You'll be eligible to donate again in {facts['days_until']} days. "
-                        "No rush — we'll be here when the time comes.")
+                d = facts["days_until"]
+                body = random.choice([
+                    f"You'll be eligible again in {d} days.",
+                    f"Eligibility returns in {d} days — your body is still in the recovery window.",
+                    f"{d} days until your next donation window opens.",
+                ])
             if facts.get("total_donations"):
-                body += f" Thank you for your {facts['total_donations']} donations so far."
-            return f"{greeting}! {body}"
+                body += f" {facts['total_donations']} donations on record — thank you."
+            return body
 
-        # Bridge facts
+        # Bridge
         if "bridges" in facts:
             bs = facts["bridges"]
             if not bs:
-                return (f"{greeting}! You don't have an active bridge on record yet. "
-                        "When one is set up, I can tell you how it's doing.")
+                return random.choice([
+                    "No active bridge on record for you yet. An admin can build one that links 8–10 donors to your cycle.",
+                    "Your bridge hasn't been set up yet. Once it's built, I can show you live status.",
+                ])
             b = bs[0]
-            return (f"{greeting}! Your bridge currently looks '{b.get('integrity', 'Unknown')}' with "
-                    f"{b.get('donors', 0)} donors lined up. We'll gently step in if that changes.")
+            integrity = b.get("integrity", "Unknown")
+            donors = b.get("donors", 0)
+            phrases = {
+                "full": f"Bridge status: Full — {donors} donors lined up. You're covered.",
+                "at-risk": f"Bridge status: At-risk — {donors} donor(s) active. The system may auto-recruit a replacement.",
+                "broken": f"Bridge status: Broken — only {donors} donor(s). An admin has been notified to repair it.",
+            }
+            return phrases.get(integrity.lower(), f"Bridge integrity: {integrity} — {donors} donor(s).")
 
-        # Stock facts
+        # Stock
         if "banks" in facts:
             banks = facts["banks"]
             if not banks:
-                return (f"{greeting}! I couldn't find available {facts.get('blood_group','')} "
-                        f"stock near {facts.get('district','that area')} right now. "
-                        "I can check a wider area if you'd like.")
+                return random.choice([
+                    f"No {facts.get('blood_group','')} stock found near {facts.get('district','that area')} right now. Try a neighbouring district or check e-RaktKosh directly.",
+                    f"{facts.get('blood_group','')} stock unavailable near {facts.get('district','that area')} in our data. Call your nearest hospital blood bank for live availability.",
+                ])
             top = banks[0]
-            return (f"{greeting}! {top.get('name', 'A nearby bank')} in "
-                    f"{top.get('district', 'your area')} currently shows "
-                    f"{top.get('available_units', 0)} units of "
-                    f"{top.get('blood_group', facts.get('blood_group', ''))}. "
-                    f"I found {len(banks)} bank(s) with stock nearby.")
+            count = len(banks)
+            return random.choice([
+                f"{top.get('name', 'Nearby bank')} in {top.get('district', 'your area')}: "
+                f"{top.get('available_units', 0)} units of {top.get('blood_group', '')}. "
+                f"{count} bank(s) with stock found.",
+                f"Closest: {top.get('name', 'a nearby bank')} — "
+                f"{top.get('available_units', 0)} units of {top.get('blood_group', '')} "
+                f"in {top.get('district', 'your area')}. {count} total.",
+            ])
 
-        # FAQ facts
+        # FAQ / situational / registration / emergency
         if "answer" in facts:
-            return f"{greeting}! {facts['answer']}"
+            return facts["answer"]
 
-        # Wellness suggestions (always carries the non-medical-advice disclaimer)
+        # Wellness
         if "suggestions" in facts:
-            parts = [f"{greeting}!"]
+            parts = []
             caution = facts.get("caution")
             if caution:
-                parts.append("One important note: " + caution)
+                parts.append("Note: " + caution)
             others = [s for s in facts["suggestions"] if s != caution]
             if others:
-                parts.append("A few things that may help: " + " ".join(others))
+                parts.append(random.choice(["Some suggestions:", "A few things that may help:", "Here are some ideas:"]) + " " + " ".join(others))
             parts.append(WELLNESS_DISCLAIMER)
             return " ".join(parts)
 
         # Fallback
-        return (f"{greeting}! I can help with your donation eligibility, your bridge, "
-                "blood availability near you, or questions about thalassemia donation. "
-                "What would you like to know?")
+        return random.choice([
+            "I can help with donation eligibility, bridge status, nearby blood stock, or general thalassemia questions. What do you need?",
+            "Ask me about your donation window, bridge health, blood banks near you, or how ThalNet works.",
+            "Not sure I caught that. Try: 'am I eligible?', 'my bridge status', 'blood banks in Hyderabad', or any thalassemia question.",
+        ])
 
 
 class BedrockLLM:

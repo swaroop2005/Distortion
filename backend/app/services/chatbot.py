@@ -23,6 +23,45 @@ from . import wellness
 from . import supply_store_shim as _stock
 from .outreach import get_llm
 
+# Situational keyword → FAQ id mapping (first match wins)
+_SITUATIONAL_MAP: list[tuple[list[str], str]] = [
+    # Specific physical conditions — check these FIRST (before generic "want to donate")
+    (["haven't slept", "no sleep", "didn't sleep", "not slept", "havent slept",
+      "didnt sleep", "sleep deprived", "lack of sleep", "bad night", "couldnt sleep",
+      "couldn't sleep", "exhausted", "sleepy", "tired", "no rest"], "situational_sleep_tired"),
+    (["i have a cold", "i have flu", "i have fever", "feeling sick", "unwell",
+      "runny nose", "sore throat", "cough", "body ache", "feeling feverish", "got fever",
+      "sick today", "coming down with"], "situational_cold_flu_fever"),
+    (["on medication", "taking medicine", "taking pills", "on tablets",
+      "antibiotics", "blood thinners", "anticoagulant", "aspirin", "warfarin",
+      "on antibiotics", "prescribed medicine", "can i donate on medication"], "situational_medication"),
+    (["nervous", "scared of needles", "fear of needles", "afraid of needle",
+      "needle phobia", "does it hurt", "will it hurt", "pain during donation",
+      "scared of blood", "phobia of blood"], "situational_nervous_needles"),
+    (["drank alcohol", "had a drink", "had beer", "had wine",
+      "drinking last night", "hangover", "been drinking", "after alcohol",
+      "can i donate after alcohol", "drank last night"], "situational_alcohol"),
+    (["thirsty", "dehydrated", "not drinking enough water", "should i drink water",
+      "drink water before", "dry mouth", "very thirsty"], "situational_dehydration"),
+    (["just ate", "ate a lot", "heavy meal", "big meal", "full stomach",
+      "just had food", "fatty food", "oily food", "after eating",
+      "ate oily food"], "situational_heavy_meal"),
+    (["got a tattoo", "tattooed", "tattoo", "piercing", "got pierced",
+      "body piercing", "ear piercing", "nose ring", "new tattoo"], "situational_tattoo_piercing"),
+    (["periods", "menstruation", "on my period", "time of the month",
+      "monthly cycle", "menstruating"], "situational_period_menstruation"),
+    (["feel weak", "feeling weak", "feel very weak", "feeling very weak",
+      "anaemic", "anemic", "low hemoglobin", "low hb", "pale", "dizzy before donating",
+      "not feeling strong", "feel low energy", "low energy today", "weak today"], "situational_low_hemoglobin_weak"),
+    (["diabetic", "diabetes", "sugar patient", "blood pressure", "hypertension",
+      "high bp", "low bp", "heart condition", "heart disease",
+      "can diabetic donate", "can i donate with bp"], "situational_diabetes_bp"),
+    # Generic intent — must stay LAST so specific conditions above take priority
+    (["i want to donate", "i would like to donate", "i want to give blood",
+      "thinking of donating", "planning to donate", "want to help",
+      "interested in donating", "how do i donate"], "situational_want_to_donate_general"),
+]
+
 
 def _valid_coord(v) -> bool:
     """True only for a real, finite coordinate (rejects None and pandas NaN)."""
@@ -95,6 +134,50 @@ def _general_faq(role: str, user_id: Optional[str], message: str) -> tuple[dict,
     return {"answer": hit["answer"]}, [hit["source"]]
 
 
+def _norm(text: str) -> str:
+    """Lowercase + strip apostrophes/punctuation so 'havent' matches 'haven't'."""
+    return text.lower().replace("'", "").replace("'", "")
+
+
+def _situational_advice(role: str, user_id: Optional[str], message: str) -> tuple[dict, list]:
+    """Route situational donor queries (sleep/sick/meds/nervous/etc.) to the right FAQ."""
+    msg_lower = _norm(message)
+    for keywords, faq_id in _SITUATIONAL_MAP:
+        if any(_norm(kw) in msg_lower for kw in keywords):
+            # Direct lookup by ID rather than keyword scoring
+            entry = next((e for e in knowledge.FAQ if e["id"] == faq_id), None)
+            if entry:
+                return {"answer": entry["answer"]}, [entry["source"]]
+    # Fall back to scored lookup
+    hit = knowledge.lookup(message)
+    if hit:
+        return {"answer": hit["answer"]}, [hit["source"]]
+    return {"note": "fallback"}, []
+
+
+def _registration(role: str, user_id: Optional[str], message: str) -> tuple[dict, list]:
+    """Handle registration, 'how thalnet works', and blood-bank contact queries."""
+    msg_lower = message.lower()
+    # Route to the most relevant FAQ entry
+    if any(w in msg_lower for w in ["thalnet", "how does this", "what is this", "about thalnet"]):
+        hit = knowledge.lookup("what is thalnet what does thalnet do")
+    elif any(w in msg_lower for w in ["blood bank", "contact", "phone", "nearest", "where to donate", "find blood"]):
+        hit = knowledge.lookup("contact blood bank blood bank near me")
+    else:
+        hit = knowledge.lookup("how to register become a donor sign up")
+    if hit:
+        return {"answer": hit["answer"]}, [hit["source"]]
+    return {"note": "fallback"}, []
+
+
+def _emergency(role: str, user_id: Optional[str], message: str) -> tuple[dict, list]:
+    """Handle urgent/emergency blood requests."""
+    hit = knowledge.lookup("emergency urgent blood urgently")
+    if hit:
+        return {"answer": hit["answer"]}, [hit["source"]]
+    return {"note": "fallback"}, []
+
+
 def _fallback(role: str, user_id: Optional[str], message: str) -> tuple[dict, list]:
     return {"note": "fallback"}, []
 
@@ -124,6 +207,9 @@ HANDLERS = {
     "stock_lookup": _stock_lookup,
     "general_faq": _general_faq,
     "wellness": _wellness,
+    "registration": _registration,
+    "emergency": _emergency,
+    "situational_advice": _situational_advice,
     "fallback": _fallback,
 }
 
@@ -159,18 +245,34 @@ def _extract_district(message: str) -> Optional[str]:
 
 # ── Entry point ──────────────────────────────────────────────────────────
 
+def _is_situational(message: str) -> bool:
+    """True if the message matches any situational pre-donation scenario."""
+    msg_lower = _norm(message)
+    for keywords, _ in _SITUATIONAL_MAP:
+        if any(_norm(kw) in msg_lower for kw in keywords):
+            return True
+    return False
+
+
 def handle_chat(message: str, role: str = "public",
                 user_id: Optional[str] = None, lang: Optional[str] = None) -> dict:
     """Classify → dispatch to a grounded handler → phrase warmly. Read-only."""
     llm = get_llm()
     lang = lang or llm.detect_language(message)
     intent = llm.classify_intent(message)["intent"]
+    # Situational override: specific medical/condition phrases beat generic classifier.
+    if intent != "situational_advice" and _is_situational(message):
+        intent = "situational_advice"
     handler = HANDLERS.get(intent, _fallback)
     facts, sources = handler(role, user_id, message)
-    # A general_faq classification with no matching entry is really a fallback.
-    if intent == "general_faq" and "answer" not in facts:
+    # Intents that return grounded answers — if no answer found, fall back.
+    _answer_intents = ("general_faq", "registration", "emergency", "situational_advice")
+    if intent in _answer_intents and "answer" not in facts:
         intent = "fallback"
         facts, sources = {"note": "fallback"}, []
+    # Log unanswered queries so admins can review and teach the bot.
+    if facts.get("note") == "fallback":
+        knowledge.log_unanswered(message, role)
     reply = llm.compose_chat_reply(facts, {"role": role}, lang)
     return {
         "reply": reply,
