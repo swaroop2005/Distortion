@@ -57,7 +57,8 @@ def _attach_scores(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _clean_row(row: dict) -> dict:
-    """Convert NaN/inf/None to safe DynamoDB values."""
+    """Convert NaN/inf/None/float to safe DynamoDB values (Decimal for numbers)."""
+    from decimal import Decimal, InvalidOperation
     out: dict = {}
     for k, v in row.items():
         if v is None:
@@ -65,7 +66,10 @@ def _clean_row(row: dict) -> dict:
         if isinstance(v, float):
             if math.isnan(v) or math.isinf(v):
                 continue
-            # DynamoDB stores Decimal; boto3 handles float but needs finite values
+            try:
+                v = Decimal(str(round(v, 6)))
+            except InvalidOperation:
+                continue
         if isinstance(v, str) and v.lower() in ("nan", "none", ""):
             continue
         out[str(k)] = v
@@ -78,6 +82,7 @@ def seed():
     df["user_id"] = df["user_id"].astype(str)
     df = _attach_scores(df)
 
+    df = df.drop_duplicates(subset=["user_id"], keep="last")
     rows = [_clean_row(r) for r in df.to_dict("records")]
 
     if DRY_RUN:
