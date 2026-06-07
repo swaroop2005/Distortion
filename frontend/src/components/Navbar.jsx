@@ -1,71 +1,83 @@
 import { Link, useLocation } from 'react-router-dom';
+import { Icon, Badge } from '../design';
 
-const roleLabels = { admin: 'Command Center', donor: 'Donor Portal', patient: 'Patient Portal' };
-
-const navLinks = {
-  admin: [
-    { to: '/admin', label: 'Dashboard' },
-    { to: '/admin/bridges', label: 'Bridges' },
-    { to: '/admin/agents', label: 'Agent Feed' },
-    { to: '/admin/supply', label: 'Supply' },
-  ],
+const ROLE_LINKS = {
   donor: [
-    { to: '/donor', label: 'My Status' },
-    { to: '/donor/register', label: 'Register' },
+    { to: '/donor', label: 'My Status', icon: 'water_drop' },
+    { to: '/donor/register', label: 'Register', icon: 'person_add' },
   ],
   patient: [
-    { to: '/patient', label: 'My Bridges' },
+    { to: '/patient', label: 'My Bridge', icon: 'favorite' },
   ],
 };
+
+const ROLE_LABELS = { donor: 'Donor', patient: 'Patient' };
 
 export default function Navbar({ role, onLogout }) {
   const location = useLocation();
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14">
-          <div className="flex items-center gap-6">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-rose-600 flex items-center justify-center">
-                <span className="text-white font-black text-sm">T</span>
-              </div>
-              <span className="font-extrabold text-gray-900 tracking-tight">
-                Thal<span className="text-rose-600">Net</span>
-              </span>
-            </Link>
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest hidden sm:block">
-              {roleLabels[role]}
-            </span>
+    <nav style={{
+      position: 'sticky', top: 0, zIndex: 50,
+      background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(12px)',
+      borderBottom: '1px solid var(--line)',
+      boxShadow: '0 1px 3px rgba(20,20,30,.04)',
+    }}>
+      <div style={{ maxWidth: 1140, margin: '0 auto', padding: '0 22px', display: 'flex', alignItems: 'center', height: 56, gap: 6 }}>
+        {/* Logo */}
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9, marginRight: 20, textDecoration: 'none' }}>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--red-500)', display: 'grid', placeItems: 'center' }}>
+            <Icon name="water_drop" size={16} fill color="#fff" />
           </div>
+          <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-.03em', color: 'var(--ink)' }}>
+            Thal<span style={{ color: 'var(--red-500)' }}>Net</span>
+          </span>
+        </Link>
 
-          <div className="hidden md:flex items-center gap-1">
-            {(navLinks[role] || []).map(link => {
-              const active = location.pathname === link.to ||
-                (link.to !== `/${role}` && location.pathname.startsWith(link.to));
-              return (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-                    active
-                      ? 'bg-rose-50 text-rose-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </div>
+        {/* Role badge */}
+        <Badge tone={role === 'patient' ? 'red' : 'green'} style={{ marginRight: 10 }}>
+          {ROLE_LABELS[role]}
+        </Badge>
 
-          <button
-            onClick={onLogout}
-            className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors"
-          >
-            Exit
-          </button>
+        {/* Nav links */}
+        <div style={{ display: 'flex', gap: 2, flex: 1 }}>
+          {(ROLE_LINKS[role] || []).map(link => {
+            const active = location.pathname === link.to ||
+              (link.to !== `/${role}` && location.pathname.startsWith(link.to));
+            return (
+              <Link
+                key={link.to}
+                to={link.to}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '8px 13px', borderRadius: 10, textDecoration: 'none',
+                  background: active ? 'var(--red-50)' : 'transparent',
+                  color: active ? 'var(--red-600)' : 'var(--muted)',
+                  fontWeight: active ? 700 : 500, fontSize: 13.5,
+                  transition: 'all .15s',
+                }}
+              >
+                <Icon name={link.icon} size={16} fill={active} color={active ? 'var(--red-500)' : 'var(--faint)'} />
+                {link.label}
+              </Link>
+            );
+          })}
         </div>
+
+        {/* Exit */}
+        <button
+          onClick={onLogout}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 13px', borderRadius: 10, border: 'none',
+            background: 'transparent', color: 'var(--muted)',
+            fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
+            transition: 'all .15s',
+          }}
+        >
+          <Icon name="logout" size={16} color="var(--faint)" />
+          Exit
+        </button>
       </div>
     </nav>
   );

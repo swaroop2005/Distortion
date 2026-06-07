@@ -49,6 +49,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .routers import admin, agent, chat, connections, donors, patients, supply_routes
+from .store import all_patients
+from .services.bridge import build_bridge
 
 app = FastAPI(
     title="ThalNet API",
@@ -66,6 +68,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ===== STARTUP: seed demo bridges =====
+@app.on_event("startup")
+async def seed_bridges() -> None:
+    """Pre-build bridges for first 10 patients. Fully fault-tolerant."""
+    try:
+        patients_list = all_patients()
+        seeded = 0
+        for patient in patients_list[:10]:
+            try:
+                build_bridge(patient["user_id"], size=8)
+                seeded += 1
+            except Exception:
+                pass
+        print(f"[startup] Seeded {seeded} demo bridges")
+    except Exception as exc:
+        print(f"[startup] Bridge seeding skipped: {exc}")
 
 
 # ===== ROUTERS (organized by access level) =====

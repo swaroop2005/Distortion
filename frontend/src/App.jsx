@@ -9,26 +9,34 @@ import ChatWidget from './components/ChatWidget';
 
 export default function App() {
   const [role, setRole] = useState(null);
-  // Shared signed-in id: portals set it on lookup; assistant + community use it.
   const [userId, setUserId] = useState(null);
+  const handleLogout = () => { setRole(null); setUserId(null); };
 
-  if (!role) {
-    return <LandingPage onSelectRole={setRole} />;
+  if (!role) return <LandingPage onSelectRole={setRole} />;
+
+  // Admin gets its own full-page layout with sidebar (no top Navbar, no ChatWidget)
+  if (role === 'admin') {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/admin/*" element={<AdminDashboard onLogout={handleLogout} />} />
+          <Route path="*" element={<Navigate to="/admin" replace />} />
+        </Routes>
+      </BrowserRouter>
+    );
   }
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-50">
-        <Navbar role={role} onLogout={() => { setRole(null); setUserId(null); }} />
+      <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <Navbar role={role} onLogout={handleLogout} />
         <Routes>
           <Route path="/" element={
-            role === 'admin' ? <Navigate to="/admin" replace /> :
-            role === 'donor' ? <Navigate to="/donor" replace /> :
-            <Navigate to="/patient" replace />
+            role === 'donor' ? <Navigate to="/donor" replace /> : <Navigate to="/patient" replace />
           } />
-          <Route path="/admin/*" element={role === 'admin' ? <AdminDashboard /> : <Navigate to="/" replace />} />
           <Route path="/donor/*" element={<DonorPortal userId={userId} setUserId={setUserId} />} />
           <Route path="/patient/*" element={<PatientPortal userId={userId} setUserId={setUserId} />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <ChatWidget role={role} userId={userId} />
       </div>

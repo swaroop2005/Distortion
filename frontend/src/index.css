@@ -1,16 +1,78 @@
 @import "tailwindcss";
 
-body {
-  margin: 0;
+/* ThalNet design tokens */
+:root {
+  --red-700: #9e1420;
+  --red-600: #c41e2a;
+  --red-500: #e11d2a;
+  --red-400: #ec4753;
+  --red-100: #fbe3e4;
+  --red-50:  #fdf1f1;
+  --green-600: #1c7a52;
+  --green-500: #1f8a5b;
+  --green-100: #e2f3ea;
+  --green-50:  #f1f9f4;
+  --amber-600: #b06f12;
+  --amber-500: #c98a1e;
+  --amber-100: #f7eccf;
+  --amber-50:  #fbf5e6;
+  --ink:       #1a1b1f;
+  --ink-soft:  #3c3e45;
+  --muted:     #6b6e76;
+  --faint:     #9a9da4;
+  --line:      #e7e7ec;
+  --line-soft: #f0f0f3;
+  --surface:   #ffffff;
+  --bg:        #f6f6f8;
+  --bg-warm:   #faf7f5;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 18px; --r-xl: 26px; --r-pill: 999px;
+  --sh-sm: 0 1px 2px rgba(20,20,30,.05), 0 1px 3px rgba(20,20,30,.04);
+  --sh-md: 0 2px 6px rgba(20,20,30,.05), 0 8px 24px rgba(20,20,30,.06);
+  --sh-lg: 0 8px 18px rgba(20,20,30,.07), 0 24px 60px rgba(20,20,30,.10);
+  --ff-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --ff-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg); color: var(--ink);
+  font-family: var(--ff-sans);
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
+#root { min-height: 100vh; }
+h1, h2, h3, h4, p { margin: 0; }
+button { font-family: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
 
-@keyframes pulse-slow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+/* Material Symbols Rounded */
+.ms {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  user-select: none;
 }
+.ms.fill { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
 
-.animate-pulse-slow {
-  animation: pulse-slow 3s ease-in-out infinite;
-}
+.tnum { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--ff-mono); }
+
+/* Animations */
+@keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.animate-pulse-slow { animation: pulse-slow 3s ease-in-out infinite; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+@keyframes fadeUp { from { transform: translateY(12px); } to { transform: none; } }
+.fade-up { animation: fadeUp .5s cubic-bezier(.2,.7,.2,1) both; }

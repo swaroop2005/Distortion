@@ -11,10 +11,10 @@ BANNED: EC2,RDS,OpenSearch,Kinesis,SageMaker-endpoint,NAT-GW. Budget <$10/$40cap
 Switch LLM: `THALNET_LLM_BACKEND=bedrock` (default=mock, $0)
 
 ## Run
-Backend: `.venv/bin/uvicorn backend.app.main:app --reload --port 8000`
-Frontend: `cd frontend && npm run dev` (Vite on :5173, proxies to :8000)
+Backend: `.venv/bin/uvicorn backend.app.main:app --reload --port 8001`
+Frontend: `cd frontend && npm run dev` (Vite on :5173, proxies to :8001)
 Python 3.9.6 via `.venv/bin/python` | node v24 npm 11 | NO aws CLI | branch: main
-API docs: http://localhost:8000/docs (32 endpoints)
+API docs: http://localhost:8001/docs (32 endpoints)
 
 ## Files
 ```
