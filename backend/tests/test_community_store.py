@@ -162,6 +162,32 @@ def test_list_connections_by_role():
     assert conn in cs.list_connections(donor_id, "donor")
 
 
+def test_donor_declines():
+    req, donor_id = _request_and_compatible_donor()
+    conn = cs.send_connection(req["request_id"], req["patient_id"], donor_id)
+    out = cs.respond_connection(conn["connection_id"], donor_id, "decline")
+    assert out["status"] == "declined"
+    assert out["responded_at"]
+
+
+def test_wrong_patient_cannot_cancel():
+    req, donor_id = _request_and_compatible_donor()
+    conn = cs.send_connection(req["request_id"], req["patient_id"], donor_id)
+    try:
+        cs.cancel_connection(conn["connection_id"], "SOMEONE-ELSE")
+        assert False, "expected Forbidden"
+    except cs.Forbidden:
+        pass
+
+
+def test_cancel_accepted_connection():
+    req, donor_id = _request_and_compatible_donor()
+    conn = cs.send_connection(req["request_id"], req["patient_id"], donor_id)
+    cs.respond_connection(conn["connection_id"], donor_id, "accept")
+    out = cs.cancel_connection(conn["connection_id"], req["patient_id"])
+    assert out["status"] == "cancelled"
+
+
 if __name__ == "__main__":
     test_create_and_get_request()
     test_create_request_unknown_patient()
@@ -178,4 +204,7 @@ if __name__ == "__main__":
     test_wrong_donor_cannot_respond()
     test_patient_cancels()
     test_list_connections_by_role()
+    test_donor_declines()
+    test_wrong_patient_cannot_cancel()
+    test_cancel_accepted_connection()
     print("test_community_store OK")

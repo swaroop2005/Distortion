@@ -145,6 +145,7 @@ def find_matches(request_id, limit: int = 20) -> list[dict]:
 # ── Connection handshake ──────────────────────────────────────────────────
 def send_connection(request_id, patient_id, donor_id) -> dict:
     """Patient sends a connection request to a blood-compatible donor."""
+    donor_id = str(donor_id)
     req = _requests.get(request_id)
     if not req:
         raise NotFound(f"request {request_id} not found")
@@ -155,9 +156,8 @@ def send_connection(request_id, patient_id, donor_id) -> dict:
         raise NotFound(f"donor {donor_id} not found")
     if not can_donate(donor.get("blood_group"), req["blood_group"]):
         raise BadState("donor is not blood-compatible with this request")
-    did = str(donor_id)
     for c in _connections.values():
-        if (c["request_id"] == request_id and c["donor_id"] == did
+        if (c["request_id"] == request_id and c["donor_id"] == donor_id
                 and c["status"] in ("pending", "accepted")):
             raise Conflict("already connected to this donor for this request")
     cid = _new_id()
@@ -165,7 +165,7 @@ def send_connection(request_id, patient_id, donor_id) -> dict:
         "connection_id": cid,
         "request_id": request_id,
         "patient_id": str(patient_id),
-        "donor_id": did,
+        "donor_id": donor_id,
         "status": "pending",
         "created": _now(),
         "responded_at": None,
