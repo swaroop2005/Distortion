@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ThalNet Admin — Blood Warriors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    html,body,#root { height:100%; }
+    #root { display:flex; }
+    .admin-layout { display:flex; width:100%; min-height:100vh; }
+    .sidebar { width:220px; min-width:220px; background:#16171c; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; }
+    .main { flex:1; background:#f3f4f6; display:flex; flex-direction:column; min-width:0; overflow-y:auto; height:100vh; }
+    .content { flex:1; padding:24px 26px 60px; max-width:1400px; }
+    .stat-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:20px; }
+    .two-col  { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); gap:18px; margin-bottom:18px; }
+    .three-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; margin-bottom:18px; }
+    .bottom-row { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); gap:18px; }
+    @media(max-width:1100px){ .stat-grid{grid-template-columns:repeat(3,1fr);} .two-col,.bottom-row{grid-template-columns:1fr;} .three-row{grid-template-columns:1fr;} }
+    @media(max-width:760px){ .sidebar{display:none;} .stat-grid{grid-template-columns:repeat(2,1fr);} }
+    .tnum{font-variant-numeric:tabular-nums;}
+    .mono{font-family:'IBM Plex Mono',monospace;}
+    .ms{font-family:'Material Symbols Rounded';font-weight:400;line-height:1;letter-spacing:normal;font-feature-settings:'liga';-webkit-font-feature-settings:'liga';display:inline-flex;user-select:none;}
+    .ms.fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    .card{background:#fff;border:1px solid #e7e7ec;border-radius:14px;box-shadow:0 1px 2px rgba(20,20,30,.04);}
+    .row-hover:hover{background:#f6f6f8 !important;}
+    .phase-triage{background:#e8f1fb;color:#1f5fa6;} .phase-outreach{background:#e2f3ea;color:#1c7a52;}
+    .phase-escalate{background:#fbe3e4;color:#9e1420;} .phase-learn{background:#f2eeff;color:#5b3fa8;}
+    tr:last-child td{border-bottom:none!important;}
+    input:focus{outline:none;}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script src="admin-data.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo } = React;
+const D = window.AD;
+
+/* ---------- micro helpers ---------- */
+function Ic({ n, z=18, fill, col, style }) {
+  return <span className={"ms"+(fill?" fill":"")} style={{fontSize:z,color:col,...style}}>{n}</span>;
+}
+function Bdg({ ch, tone="neutral", style }) {
+  const m={neutral:{c:"#6b6e76",bg:"#f0f0f3"},green:{c:"#1c7a52",bg:"#e2f3ea"},amber:{c:"#b06f12",bg:"#f7eccf"},red:{c:"#9e1420",bg:"#fbe3e4"},blue:{c:"#1f5fa6",bg:"#e8f1fb"},purple:{c:"#5b3fa8",bg:"#f2eeff"}};
+  const s=m[tone];
+  return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:99,fontSize:12,fontWeight:700,color:s.c,background:s.bg,...style}}>{ch}</span>;
+}
+function IntBdg({ v }) {
+  const m={full:{t:"green",ic:"check_circle",l:"Full"},["at-risk"]:{t:"amber",ic:"warning",l:"At risk"},broken:{t:"red",ic:"cancel",l:"Broken"}};
+  const s=m[v]||m.full;
+  return <Bdg tone={s.t}><Ic n={s.ic} z={13} fill />&nbsp;{s.l}</Bdg>;
+}
+function StockBar({ v, max, status }) {
+  const col={ok:"#1f8a5b",watch:"#c98a1e",low:"#c98a1e",critical:"#e11d2a"}[status];
+  const pct=Math.round((v/max)*100);
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:8}}>
+      <div style={{flex:1,height:7,borderRadius:99,background:"#e7e7ec",overflow:"hidden",minWidth:50}}>
+        <div style={{width:pct+"%",height:"100%",background:col,borderRadius:99,transition:"width 1s ease"}}/>
+      </div>
+      <span className="tnum mono" style={{fontSize:12,fontWeight:600,color:col,width:28,textAlign:"right"}}>{v}</span>
+    </div>
+  );
+}
+function Sparkline({ data, col="#1f8a5b", w=100, h=32 }) {
+  const mn=Math.min(...data),mx=Math.max(...data),rng=mx-mn||1;
+  const pts=data.map((v,i)=>`${(i/(data.length-1))*w},${h-((v-mn)/rng)*(h-4)+2}`).join(" ");
+  return (
+    <svg width={w} height={h} style={{overflow:"visible"}}>
+      <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={col} stopOpacity=".18"/><stop offset="100%" stopColor={col} stopOpacity="0"/></linearGradient></defs>
+      <polyline points={pts} fill="none" stroke={col} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function Avatar({ nm, sz=32 }) {
+  const ini=(nm||"?").split(" ").map(w=>w[0]).slice(0,2).join("");
+  const hue=useMemo(()=>{let h=0;for(let i=0;i<(nm||"").length;i++)h=(nm.charCodeAt(i)+((h<<5)-h));return Math.abs(h)%360;},[nm]);
+  return <div style={{width:sz,height:sz,borderRadius:99,display:"grid",placeItems:"center",background:`oklch(0.9 0.05 ${hue})`,color:`oklch(0.38 0.09 ${hue})`,fontWeight:700,fontSize:sz*0.38,letterSpacing:"-.02em",flexShrink:0}}>{ini}</div>;
+}
+function ChurnBar({ v }) {
+  const col=v>0.6?"#e11d2a":v>0.35?"#c98a1e":"#1f8a5b";
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:8}}>
+      <div style={{flex:1,height:6,borderRadius:99,background:"#e7e7ec",overflow:"hidden",minWidth:60}}>
+        <div style={{width:(v*100)+"%",height:"100%",background:col,borderRadius:99}}/>
+      </div>
+      <span className="tnum mono" style={{fontSize:12,fontWeight:700,color:col,width:30}}>{Math.round(v*100)}%</span>
+    </div>
+  );
+}
+
+/* ---------- sidebar ---------- */
+const NAV=[
+  {k:"dashboard",n:"Dashboard",i:"space_dashboard"},
+  {k:"bridges",n:"Bridges",i:"hub"},
+  {k:"donors",n:"Donors",i:"volunteer_activism"},
+  {k:"patients",n:"Patients",i:"favorite"},
+  {k:"agent-log",n:"Agent Log",i:"terminal"},
+  {k:"supply",n:"Supply",i:"local_hospital"},
+  {k:"settings",n:"Settings",i:"settings"},
+];
+function Sidebar({ page, setPage }) {
+  return (
+    <nav className="sidebar">
+      <div style={{padding:"20px 18px 14px",borderBottom:"1px solid #24262e"}}>
+        <div style={{display:"flex",alignItems:"center",gap:9}}>
+          <div style={{width:34,height:34,borderRadius:9,background:"#e11d2a",display:"grid",placeItems:"center",boxShadow:"0 2px 6px rgba(225,29,42,.35)"}}>
+            <Ic n="water_drop" z={18} fill col="#fff"/>
+          </div>
+          <div style={{lineHeight:1}}>
+            <div style={{fontWeight:800,fontSize:16,letterSpacing:"-.03em",color:"#fff"}}>Thal<span style={{color:"#e11d2a"}}>Net</span></div>
+            <div style={{fontSize:10.5,color:"#5a5d68",fontWeight:600,letterSpacing:".04em",marginTop:2}}>ADMIN</div>
+          </div>
+        </div>
+      </div>
+      <div style={{flex:1,padding:"10px 10px",display:"flex",flexDirection:"column",gap:2}}>
+        {NAV.map(item=>{
+          const active=page===item.k;
+          return (
+            <button key={item.k} onClick={()=>setPage(item.k)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:"none",background:active?"#23252c":"transparent",color:active?"#fff":"#7a7d87",fontWeight:active?700:500,fontSize:13.5,textAlign:"left",cursor:"pointer",transition:"all .15s",width:"100%",fontFamily:"inherit"}}>
+              <Ic n={item.i} z={18} fill={active} col={active?"#e11d2a":"#5a5d68"}/>
+              {item.n}
+              {item.k==="agent-log"&&<span style={{marginLeft:"auto",background:"#23252c",color:"#7fd3a8",borderRadius:99,padding:"2px 8px",fontSize:11,fontWeight:700}}>live</span>}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{padding:"12px 14px",borderTop:"1px solid #24262e"}}>
+        <div style={{display:"flex",alignItems:"center",gap:9}}>
+          <Avatar nm="BW Coordinator" sz={30}/>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:12.5,fontWeight:700,color:"#c3c6cf",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Coordinator</div>
+            <div style={{fontSize:11,color:"#5a5d68"}}>Blood Warriors</div>
+          </div>
+          <Ic n="logout" z={16} col="#5a5d68"/>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+/* ---------- topbar ---------- */
+function TopBar({ page }) {
+  const now=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  const labels={dashboard:"Dashboard",bridges:"Bridge Management",donors:"Donor Pool",patients:"Patient Registry","agent-log":"Agent Activity Log",supply:"Supply Intelligence",settings:"Settings"};
+  return (
+    <div style={{padding:"14px 26px",borderBottom:"1px solid #e7e7ec",background:"#fff",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,position:"sticky",top:0,zIndex:20}}>
+      <div>
+        <div style={{fontWeight:800,fontSize:18,letterSpacing:"-.02em"}}>{labels[page]||"Dashboard"}</div>
+        <div style={{fontSize:12.5,color:"#9a9da4",marginTop:1}}>{now} · Hyderabad Region</div>
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:99,background:"#e2f3ea",color:"#1c7a52",fontSize:12.5,fontWeight:700}}>
+          <span style={{width:7,height:7,borderRadius:99,background:"#1f8a5b",animation:"blink 1.6s infinite"}}/>
+          Agents running
+        </div>
+        <button style={{width:38,height:38,borderRadius:99,border:"1px solid #e7e7ec",background:"#fff",display:"grid",placeItems:"center",cursor:"pointer",position:"relative"}}>
+          <Ic n="notifications" z={19} col="#6b6e76"/>
+          <span style={{position:"absolute",top:8,right:8,width:8,height:8,borderRadius:99,background:"#e11d2a",border:"2px solid #fff"}}/>
+        </button>
+        <a href="ThalNet.html" style={{padding:"8px 15px",borderRadius:99,border:"1px solid #e7e7ec",background:"#fff",fontSize:13,fontWeight:600,color:"#6b6e76",display:"inline-flex",alignItems:"center",gap:6,textDecoration:"none"}}>
+          <Ic n="open_in_new" z={15}/> Portal
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- stats row ---------- */
+const STAT_DEFS=[
+  {k:"totalPatients",   l:"Total patients",       i:"favorite",          sub:"+3 this month",    tone:"#1a1b1f"},
+  {k:"totalDonors",     l:"Total donors",          i:"volunteer_activism", sub:"4,446 enrolled",  tone:"#1f8a5b"},
+  {k:"eligibleNow",     l:"Eligible right now",    i:"check_circle",      sub:"can donate today",tone:"#1f8a5b"},
+  {k:"bridgesAtRisk",   l:"At-risk bridges",       i:"warning",           sub:`${D.stats.bridgesBroken} broken`, tone:"#c98a1e"},
+  {k:"upcomingWeek",    l:"Transfusions this week",i:"calendar_month",    sub:"next 7 days",     tone:"#e11d2a"},
+  {k:"responseRate30d", l:"Response rate (30d)",   i:"forum",             sub:"accept: "+D.stats.acceptRate30d+"%",tone:"#1f8a5b"},
+];
+function StatsRow() {
+  return (
+    <div className="stat-grid">
+      {STAT_DEFS.map(s=>(
+        <div key={s.k} className="card" style={{padding:"16px 18px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+            <Ic n={s.i} z={20} fill col={s.tone}/>
+            {s.k==="responseRate30d" && <Sparkline data={D.acceptRateTrend} col="#1f8a5b" w={60} h={26}/>}
+          </div>
+          <div className="tnum" style={{fontSize:28,fontWeight:800,letterSpacing:"-.03em",color:s.tone,lineHeight:1}}>{s.k==="responseRate30d"?D.stats[s.k]+"%":(D.stats[s.k]||0).toLocaleString("en-IN")}</div>
+          <div style={{fontSize:12.5,color:"#6b6e76",marginTop:5,fontWeight:600}}>{s.l}</div>
+          <div style={{fontSize:11.5,color:"#9a9da4",marginTop:1}}>{s.sub}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ---------- bridge health board ---------- */
+function BridgeBoard({ full }) {
+  const [filter,setFilter]=useState("all");
+  const [search,setSearch]=useState("");
+  const rows=D.bridges.filter(b=>(filter==="all"||b.integrity===filter)&&(b.name.toLowerCase().includes(search.toLowerCase())||b.pid.includes(search)));
+  const show=full?rows:rows.slice(0,10);
+  return (
+    <div className="card" style={{overflow:"hidden"}}>
+      <div style={{padding:"16px 18px 12px",borderBottom:"1px solid #e7e7ec",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:800,fontSize:16,letterSpacing:"-.02em"}}>Bridge Health Board</div>
+          <div style={{fontSize:12.5,color:"#9a9da4",marginTop:1}}>Every patient bridge · updated live</div>
+        </div>
+        <div style={{display:"flex",gap:6}}>
+          {["all","full","at-risk","broken"].map(f=>(
+            <button key={f} onClick={()=>setFilter(f)} style={{padding:"6px 13px",borderRadius:99,border:"1px solid "+(filter===f?"transparent":"#e7e7ec"),background:filter===f?("#e11d2a"):"#fff",color:filter===f?"#fff":"#6b6e76",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"inherit",textTransform:"capitalize"}}>{f}</button>
+          ))}
+        </div>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search patient…" style={{padding:"7px 12px",borderRadius:99,border:"1px solid #e7e7ec",fontSize:13,fontFamily:"inherit",background:"#f6f6f8",width:160}}/>
+      </div>
+      <div style={{overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:13.5}}>
+          <thead>
+            <tr style={{background:"#f6f6f8"}}>
+              {["Patient","Group","Bridge","Integrity","Next Tx","Last Healed","Action"].map(h=>(
+                <th key={h} style={{padding:"10px 14px",textAlign:"left",fontWeight:700,color:"#9a9da4",fontSize:12,letterSpacing:".05em",textTransform:"uppercase",whiteSpace:"nowrap",borderBottom:"1px solid #e7e7ec"}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {show.map((b,i)=>{
+              const rowBg=b.integrity==="broken"?"#fff9f9":b.integrity==="at-risk"?"#fffbf3":"#fff";
+              return (
+                <tr key={b.pid} className="row-hover" style={{background:rowBg,borderBottom:"1px solid #f0f0f3"}}>
+                  <td style={{padding:"11px 14px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:9}}>
+                      <Avatar nm={b.name} sz={30}/>
+                      <div><div style={{fontWeight:700,fontSize:13.5}}>{b.name}</div><div style={{fontSize:11.5,color:"#9a9da4"}}>{b.pid}</div></div>
+                    </div>
+                  </td>
+                  <td style={{padding:"11px 14px"}}><span className="mono" style={{fontWeight:700,fontSize:14,color:"#1a1b1f"}}>{b.group}</span></td>
+                  <td style={{padding:"11px 14px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <div style={{height:6,width:70,borderRadius:99,background:"#e7e7ec",overflow:"hidden"}}><div style={{width:`${(b.size/b.target)*100}%`,height:"100%",background:b.integrity==="broken"?"#e11d2a":b.integrity==="at-risk"?"#c98a1e":"#1f8a5b",borderRadius:99}}/></div>
+                      <span className="tnum" style={{fontSize:12.5,fontWeight:700,color:"#6b6e76"}}>{b.size}/{b.target}</span>
+                    </div>
+                  </td>
+                  <td style={{padding:"11px 14px"}}><IntBdg v={b.integrity}/></td>
+                  <td style={{padding:"11px 14px"}}><span style={{fontWeight:600,color:b.integrity==="broken"?"#9e1420":"#1a1b1f"}}>{b.date||b.nextTx}</span></td>
+                  <td style={{padding:"11px 14px",color:"#9a9da4",fontSize:12.5}}>{b.lastHealed}</td>
+                  <td style={{padding:"11px 14px"}}>
+                    <div style={{display:"flex",gap:6}}>
+                      {b.integrity!=="full"&&<button style={{padding:"6px 12px",borderRadius:99,background:"#e11d2a",color:"#fff",border:"none",fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Heal</button>}
+                      <button style={{padding:"6px 12px",borderRadius:99,background:"#f0f0f3",color:"#6b6e76",border:"none",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>View</button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {!full&&rows.length>10&&<div style={{padding:"12px 18px",borderTop:"1px solid #e7e7ec",textAlign:"center",fontSize:13,color:"#9a9da4"}}>Showing 10 of {rows.length} bridges</div>}
+    </div>
+  );
+}
+
+/* ---------- agent feed ---------- */
+const PHASE_STYLE={TRIAGE:"phase-triage",OUTREACH:"phase-outreach",ESCALATE:"phase-escalate",LEARN:"phase-learn"};
+function AgentFeed() {
+  const [paused,setPaused]=useState(false);
+  return (
+    <div className="card" style={{background:"#16171c",border:"1px solid #24262e",overflow:"hidden"}}>
+      <div style={{padding:"14px 16px",borderBottom:"1px solid #24262e",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div>
+          <div style={{fontWeight:700,fontSize:14.5,color:"#c3c6cf",display:"flex",alignItems:"center",gap:8}}>
+            <span style={{width:8,height:8,borderRadius:99,background:"#7fd3a8",animation:paused?"none":"blink 1.6s infinite"}}/>
+            Agent Activity · Live
+          </div>
+          <div style={{fontSize:11.5,color:"#5a5d68",marginTop:2}}>Autonomous loop — visible to coordinators</div>
+        </div>
+        <button onClick={()=>setPaused(p=>!p)} style={{padding:"5px 12px",borderRadius:99,border:"1px solid #24262e",background:"#23252c",color:"#7a7d87",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{paused?"Resume":"Pause"}</button>
+      </div>
+      <div style={{padding:"12px 0",maxHeight:360,overflowY:"auto"}}>
+        {D.agentFeed.map((f,i)=>(
+          <div key={i} style={{display:"flex",gap:11,padding:"8px 16px",borderBottom:"1px solid #1c1e25"}}>
+            <span className="mono" style={{fontSize:11.5,color:"#5a5d68",flexShrink:0,paddingTop:1}}>{f.ts}</span>
+            <span className={"mono "+PHASE_STYLE[f.phase]} style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:99,height:"fit-content",flexShrink:0,letterSpacing:".04em"}}>{f.phase}</span>
+            <span style={{fontSize:12.5,color:f.ok?"#c3c6cf":"#e8a14c",lineHeight:1.4}}>{f.msg}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{padding:"10px 16px",borderTop:"1px solid #24262e",display:"flex",gap:8,flexWrap:"wrap"}}>
+        {["TRIAGE","OUTREACH","ESCALATE","LEARN"].map(p=>(
+          <span key={p} className={"mono "+PHASE_STYLE[p]} style={{fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:99,letterSpacing:".04em"}}>{p}</span>
+        ))}
+        <span style={{marginLeft:"auto",fontSize:11.5,color:"#5a5d68"}} className="mono">{D.stats.escalationsOpen} escalated → human review</span>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- churn alerts ---------- */
+const ACTIONS={contact:{l:"Contact now",bg:"#e11d2a",col:"#fff"},wait:{l:"Wait",bg:"#f0f0f3",col:"#6b6e76"},appreciate:{l:"Send thanks",bg:"#1f8a5b",col:"#fff"},dnd:{l:"Do not disturb",bg:"#f0f0f3",col:"#9a9da4"}};
+function ChurnAlerts() {
+  const [done,setDone]=useState({});
+  return (
+    <div className="card" style={{overflow:"hidden"}}>
+      <div style={{padding:"14px 18px",borderBottom:"1px solid #e7e7ec"}}>
+        <div style={{fontWeight:800,fontSize:15,letterSpacing:"-.02em"}}>Donor Churn Alerts</div>
+        <div style={{fontSize:12.5,color:"#9a9da4",marginTop:2}}>ML-flagged · AI recommends next action</div>
+      </div>
+      <div style={{padding:"12px 14px",display:"flex",flexDirection:"column",gap:10,maxHeight:480,overflowY:"auto"}}>
+        {D.churnAlerts.map(a=>{
+          const act=ACTIONS[a.action];
+          const isDone=done[a.did];
+          return (
+            <div key={a.did} style={{border:"1px solid #e7e7ec",borderRadius:12,padding:"13px 14px",opacity:isDone?.5:1,transition:"opacity .3s",background:isDone?"#f6f6f8":"#fff"}}>
+              <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                <Avatar nm={a.name} sz={34}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}>
+                    <span style={{fontWeight:700,fontSize:14}}>{a.name}</span>
+                    <span className="mono" style={{fontSize:12,color:"#9a9da4",fontWeight:600}}>{a.did} · {a.group}</span>
+                  </div>
+                  <ChurnBar v={a.churn}/>
+                  <div style={{display:"flex",gap:12,marginTop:5,fontSize:12,color:"#9a9da4"}}>
+                    <span>Churn risk: <b className="tnum">{Math.round(a.churn*100)}%</b></span>
+                    <span>Responsiveness: <b className="tnum">{Math.round(a.responsiveness*100)}%</b></span>
+                    <span>Last contact: {a.lastContact}</span>
+                  </div>
+                </div>
+              </div>
+              <div style={{fontSize:13,color:"#3c3e45",marginTop:9,lineHeight:1.4}}>{a.reason}</div>
+              <div style={{marginTop:10,display:"flex",alignItems:"center",gap:8,justifyContent:"space-between",flexWrap:"wrap"}}>
+                <div style={{fontSize:12,color:"#9a9da4",display:"flex",gap:5,alignItems:"center"}}>
+                  <span style={{fontSize:14}}>✦</span> {ACTIONS[a.action].l}
+                </div>
+                {isDone
+                  ? <Bdg ch="Done" tone="green"/>
+                  : <button onClick={()=>setDone(d=>({...d,[a.did]:true}))} style={{padding:"7px 14px",borderRadius:99,background:act.bg,color:act.col,border:"none",fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{act.l}</button>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- urgent transfusions ---------- */
+function UrgentTx() {
+  return (
+    <div className="card" style={{overflow:"hidden"}}>
+      <div style={{padding:"14px 18px",borderBottom:"1px solid #e7e7ec",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div>
+          <div style={{fontWeight:800,fontSize:15,letterSpacing:"-.02em"}}>Urgent Transfusions</div>
+          <div style={{fontSize:12.5,color:"#9a9da4",marginTop:2}}>Within the next 7 days</div>
+        </div>
+        <Bdg ch={`${D.urgentTx.length} upcoming`} tone="red"/>
+      </div>
+      <div style={{overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:13.5}}>
+          <thead>
+            <tr style={{background:"#f6f6f8"}}>
+              {["Patient","Group","Date","Bridge","Confirmed","Action"].map(h=>(
+                <th key={h} style={{padding:"9px 14px",textAlign:"left",fontWeight:700,color:"#9a9da4",fontSize:11.5,letterSpacing:".05em",textTransform:"uppercase",borderBottom:"1px solid #e7e7ec",whiteSpace:"nowrap"}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {D.urgentTx.map((t,i)=>{
+              const crit=t.bridge==="broken";
+              const warn=t.bridge==="at-risk";
+              return (
+                <tr key={t.pid} className="row-hover" style={{background:crit?"#fff9f9":warn?"#fffbf3":"#fff",borderBottom:"1px solid #f0f0f3"}}>
+                  <td style={{padding:"10px 14px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      {crit&&<span style={{width:8,height:8,borderRadius:99,background:"#e11d2a",animation:"blink 1.4s infinite",flexShrink:0}}/>}
+                      <div><div style={{fontWeight:700}}>{t.name}</div><div style={{fontSize:11.5,color:"#9a9da4"}}>{t.pid}</div></div>
+                    </div>
+                  </td>
+                  <td style={{padding:"10px 14px"}}><span className="mono" style={{fontWeight:700}}>{t.group}</span></td>
+                  <td style={{padding:"10px 14px"}}><span style={{fontWeight:600,color:crit?"#9e1420":"#1a1b1f"}}>{t.date}</span></td>
+                  <td style={{padding:"10px 14px"}}><IntBdg v={t.bridge}/></td>
+                  <td style={{padding:"10px 14px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:7}}>
+                      <span className="tnum" style={{fontWeight:700,color:t.confirmed<t.needed/2?"#9e1420":"#1a1b1f"}}>{t.confirmed}/{t.needed}</span>
+                      <div style={{height:5,width:50,borderRadius:99,background:"#e7e7ec",overflow:"hidden"}}><div style={{width:`${(t.confirmed/t.needed)*100}%`,height:"100%",background:t.confirmed===t.needed?"#1f8a5b":crit?"#e11d2a":"#c98a1e",borderRadius:99}}/></div>
+                    </div>
+                  </td>
+                  <td style={{padding:"10px 14px"}}>
+                    <button style={{padding:"6px 12px",borderRadius:99,background:crit?"#e11d2a":"#f0f0f3",color:crit?"#fff":"#6b6e76",border:"none",fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{crit?"Escalate":"View"}</button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- supply panel ---------- */
+function SupplyPanel() {
+  const col={ok:"#1f8a5b",watch:"#c98a1e",low:"#c98a1e",critical:"#e11d2a"};
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:18}}>
+      <div className="card" style={{overflow:"hidden"}}>
+        <div style={{padding:"14px 18px",borderBottom:"1px solid #e7e7ec"}}>
+          <div style={{fontWeight:800,fontSize:15,letterSpacing:"-.02em"}}>Regional Blood Stock</div>
+          <div style={{fontSize:12,color:"#9a9da4",marginTop:2}} className="mono">{D.stats.totalDonors>0?"3,863 banks tracked · Hyderabad region":""}</div>
+        </div>
+        <div style={{padding:"14px 16px",display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+          {D.supply.regional.map(g=>(
+            <div key={g.group} style={{border:"1px solid #e7e7ec",borderRadius:11,padding:"10px 10px 8px",textAlign:"center"}}>
+              <div style={{fontSize:14,fontWeight:800,letterSpacing:"-.02em"}} className="mono">{g.group}</div>
+              <div className="tnum" style={{fontSize:20,fontWeight:800,color:col[g.status],marginTop:2}}>{g.units}</div>
+              <StockBar v={g.units} max={g.max} status={g.status}/>
+              <div style={{fontSize:10,fontWeight:700,letterSpacing:".06em",color:col[g.status],textTransform:"uppercase",marginTop:4}} className="mono">{g.status}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{padding:"0 16px 14px",display:"flex",flexDirection:"column",gap:7}}>
+          {D.supply.shortages.map((s,i)=>(
+            <div key={i} style={{display:"flex",gap:9,alignItems:"flex-start",padding:"9px 12px",borderRadius:10,background:s.severity==="critical"?"#fbe3e4":s.severity==="low"?"#f7eccf":"#f0f0f3",border:`1px solid ${s.severity==="critical"?"#f3c6c9":s.severity==="low"?"#f5dec5":"#e7e7ec"}`}}>
+              <span style={{fontSize:14,color:col[s.severity],flexShrink:0,marginTop:1}}>●</span>
+              <div style={{fontSize:13,color:"#3c3e45",lineHeight:1.4}}><b className="mono" style={{color:col[s.severity]}}>{s.group}</b> — {s.note}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="card" style={{overflow:"hidden"}}>
+        <div style={{padding:"14px 18px",borderBottom:"1px solid #e7e7ec"}}>
+          <div style={{fontWeight:800,fontSize:15,letterSpacing:"-.02em"}}>Nearby Blood Banks</div>
+        </div>
+        <div style={{padding:"4px 0"}}>
+          {D.supply.banks.map((b,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 18px",borderBottom:i<D.supply.banks.length-1?"1px solid #f0f0f3":"none"}}>
+              <span style={{width:8,height:8,borderRadius:99,background:b.open?"#1f8a5b":"#9a9da4",flexShrink:0}}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:14,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.name}</div>
+                <div style={{fontSize:12,color:"#9a9da4"}}>{b.area} · {b.km}km</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div className="tnum mono" style={{fontSize:14,fontWeight:700,color:b.open?"#1a1b1f":"#9a9da4"}}>{b.units} <span style={{fontSize:11,fontWeight:500,color:"#9a9da4"}}>units</span></div>
+                <div style={{fontSize:11,color:b.open?"#1c7a52":"#9a9da4",fontWeight:600}}>{b.open?"Open":"Closed"}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{padding:"11px 18px",borderTop:"1px solid #e7e7ec"}}>
+          <a href="#" style={{fontSize:13,color:"#e11d2a",fontWeight:700,display:"inline-flex",alignItems:"center",gap:6,textDecoration:"none"}}>
+            <Ic n="open_in_new" z={15}/> Open Supply Command Center
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- learning insights ---------- */
+function LearningInsights() {
+  return (
+    <div className="card">
+      <div style={{padding:"14px 18px",borderBottom:"1px solid #e7e7ec"}}>
+        <div style={{fontWeight:800,fontSize:15,letterSpacing:"-.02em"}}>Learning Insights</div>
+        <div style={{fontSize:12.5,color:"#9a9da4",marginTop:2}}>What the agent learned from recent outreach</div>
+      </div>
+      <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:11}}>
+        {D.learning.map((l,i)=>{
+          const tc={up:"#1c7a52",down:"#9e1420",neutral:"#6b6e76"}[l.trend];
+          const ic={up:"trending_up",down:"trending_down",neutral:"trending_flat"}[l.trend];
+          return (
+            <div key={i} style={{display:"flex",gap:12,alignItems:"flex-start",padding:"11px 13px",borderRadius:12,background:"#f6f6f8",border:"1px solid #e7e7ec"}}>
+              <div style={{width:34,height:34,borderRadius:10,background:l.trend==="up"?"#e2f3ea":l.trend==="down"?"#fbe3e4":"#f0f0f3",display:"grid",placeItems:"center",flexShrink:0}}>
+                <Ic n={ic} z={19} fill col={tc}/>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13.5,color:"#1a1b1f",lineHeight:1.4,fontWeight:500}}>{l.insight}</div>
+                <div className="mono" style={{fontSize:12,fontWeight:700,color:tc,marginTop:5}}>{l.delta}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{padding:"12px 18px 14px",borderTop:"1px solid #e7e7ec",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{fontSize:13,color:"#9a9da4"}}>Accept rate this month</div>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <Sparkline data={D.acceptRateTrend} col="#1f8a5b" w={80} h={30}/>
+          <span className="tnum" style={{fontSize:18,fontWeight:800,color:"#1f8a5b"}}>{D.stats.acceptRate30d}%</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- dashboard layout ---------- */
+function Dashboard() {
+  return (
+    <div className="content">
+      <StatsRow/>
+      <div className="two-col">
+        <BridgeBoard/>
+        <AgentFeed/>
+      </div>
+      <div className="three-row">
+        <ChurnAlerts/>
+        <UrgentTx/>
+      </div>
+      <div className="bottom-row">
+        <SupplyPanel/>
+        <LearningInsights/>
+      </div>
+    </div>
+  );
+}
+
+function PageStub({ title }) {
+  return (
+    <div className="content" style={{display:"grid",placeItems:"center",minHeight:400}}>
+      <div style={{textAlign:"center",color:"#9a9da4"}}>
+        <Ic n="construction" z={40} col="#e7e7ec"/>
+        <div style={{fontSize:16,fontWeight:700,marginTop:12}}>{title}</div>
+        <div style={{fontSize:13.5,marginTop:6}}>Full view in progress — all data available via API</div>
+      </div>
+    </div>
+  );
+}
+
+function BridgesPage() { return <div className="content"><BridgeBoard full/></div>; }
+
+/* ---------- app ---------- */
+function App() {
+  const [page,setPage]=useState("dashboard");
+  useEffect(()=>{ window.scrollTo(0,0); },[page]);
+  return (
+    <div className="admin-layout">
+      <Sidebar page={page} setPage={setPage}/>
+      <div className="main">
+        <TopBar page={page}/>
+        {page==="dashboard" && <Dashboard/>}
+        {page==="bridges"   && <BridgesPage/>}
+        {["donors","patients","agent-log","supply","settings"].includes(page) && <PageStub title={{donors:"Donor Pool",patients:"Patient Registry","agent-log":"Full Agent Log",supply:"Supply Command Center",settings:"Settings"}[page]}/>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
