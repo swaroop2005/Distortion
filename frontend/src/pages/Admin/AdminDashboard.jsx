@@ -11,15 +11,16 @@ import BridgesPage from './BridgesPage';
 import AgentsPage from './AgentsPage';
 import SupplyPage from './SupplyPage';
 
-/* ── palette / tokens ──────────────────────────────────────── */
+/* ── palette / tokens — matches dashboard.html ─────────────── */
 const C = {
-  ink: '#1a1b1f', soft: '#6b6e76', faint: '#9a9da4',
-  line: '#e7e7ec', bg: '#f3f4f6', surface: '#fff',
-  red: '#e11d2a', redSoft: '#fbe3e4', redText: '#9e1420',
-  green: '#1f8a5b', greenSoft: '#e2f3ea', greenText: '#1c7a52',
-  amber: '#c98a1e', amberSoft: '#f7eccf',
+  ink: '#16202c', soft: '#6b7a8d', faint: '#9aa5b2',
+  line: '#e3e9f0', bg: '#eef2f7', surface: '#fff',
+  red: '#e63148', redSoft: '#fef2f2', redText: '#c53030',
+  green: '#17b26a', greenSoft: '#e2f3ea', greenText: '#1c7a52',
+  amber: '#f5a524', amberSoft: '#fffbeb',
   blue: '#1f5fa6', blueSoft: '#e8f1fb',
   purple: '#5b3fa8', purpleSoft: '#f2eeff',
+  navy: '#0a2540', navy2: '#13355c',
 };
 
 /* ── micro helpers ─────────────────────────────────────────── */
@@ -92,15 +93,15 @@ const NAV = [
 function Sidebar({ onLogout }) {
   const location = useLocation();
   return (
-    <nav style={{ width: 220, minWidth: 220, background: '#16171c', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh' }}>
-      <div style={{ padding: '20px 18px 14px', borderBottom: '1px solid #24262e' }}>
+    <nav style={{ width: 220, minWidth: 220, background: C.navy, display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh' }}>
+      <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid #163660' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 9, background: C.red, display: 'grid', placeItems: 'center', boxShadow: '0 2px 6px rgba(225,29,42,.35)' }}>
-            <Ic n="water_drop" z={18} fill col="#fff" />
-          </div>
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="#ff5269">
+            <path d="M12 2S5 10 5 15a7 7 0 0 0 14 0c0-5-7-13-7-13z"/>
+          </svg>
           <div style={{ lineHeight: 1 }}>
             <div style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-.03em', color: '#fff' }}>Thal<span style={{ color: C.red }}>Net</span></div>
-            <div style={{ fontSize: 10.5, color: '#5a5d68', fontWeight: 600, letterSpacing: '.04em', marginTop: 2 }}>ADMIN</div>
+            <div style={{ fontSize: 10.5, color: '#aebfd4', fontWeight: 600, letterSpacing: '.04em', marginTop: 2 }}>COMMAND CENTER</div>
           </div>
         </div>
       </div>
@@ -111,28 +112,28 @@ function Sidebar({ onLogout }) {
             : location.pathname.startsWith(item.path);
           return (
             <Link key={item.path} to={item.path} style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10,
-              background: active ? '#23252c' : 'transparent', color: active ? '#fff' : '#7a7d87',
+              display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 9,
+              background: active ? C.red : 'transparent', color: active ? '#fff' : '#aebfd4',
               fontWeight: active ? 700 : 500, fontSize: 13.5, textDecoration: 'none', transition: 'all .15s',
             }}>
-              <Ic n={item.icon} z={18} fill={active} col={active ? C.red : '#5a5d68'} />
+              <Ic n={item.icon} z={18} fill={active} col={active ? '#fff' : '#6b8bad'} />
               {item.label}
-              {item.live && <span style={{ marginLeft: 'auto', background: '#1a2d1f', color: '#7fd3a8', borderRadius: 99, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>live</span>}
+              {item.live && <span style={{ marginLeft: 'auto', background: 'rgba(127,211,168,.15)', color: '#7fd3a8', borderRadius: 99, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>live</span>}
             </Link>
           );
         })}
       </div>
-      <div style={{ padding: '12px 14px', borderTop: '1px solid #24262e' }}>
+      <div style={{ padding: '12px 14px', borderTop: '1px solid #163660' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 99, background: '#23252c', display: 'grid', placeItems: 'center' }}>
-            <Ic n="person" z={16} col="#7a7d87" />
+          <div style={{ width: 30, height: 30, borderRadius: 99, background: '#163660', display: 'grid', placeItems: 'center' }}>
+            <Ic n="person" z={16} col="#aebfd4" />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: '#c3c6cf', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Coordinator</div>
-            <div style={{ fontSize: 11, color: '#5a5d68' }}>Blood Warriors</div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: '#e2eaf4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Coordinator</div>
+            <div style={{ fontSize: 11, color: '#6b8bad' }}>Blood Warriors</div>
           </div>
           <button onClick={onLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-            <Ic n="logout" z={16} col="#5a5d68" />
+            <Ic n="logout" z={16} col="#6b8bad" />
           </button>
         </div>
       </div>
@@ -140,58 +141,67 @@ function Sidebar({ onLogout }) {
   );
 }
 
-/* ── topbar ────────────────────────────────────────────────── */
+/* ── topbar — navy gradient matching dashboard.html header ──── */
 function TopBar({ page }) {
-  const now = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  const labels = { dashboard: 'Dashboard', bridges: 'Bridge Management', agents: 'Agent Activity Log', supply: 'Supply Intelligence' };
+  const now = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const labels = {
+    dashboard: { title: 'Blood Supply Command Center', sub: 'Autonomous coordination · Hyderabad Region' },
+    bridges: { title: 'Bridge Management', sub: 'Auto-Bridge Builder · 8→1 donor coverage' },
+    agents: { title: 'Agent Activity Log', sub: 'Triage → Outreach → Escalate → Learn' },
+    supply: { title: 'Supply Intelligence', sub: 'National blood stock · e-RaktKosh data' },
+  };
+  const lbl = labels[page] || labels.dashboard;
   return (
-    <div style={{ padding: '14px 26px', borderBottom: `1px solid ${C.line}`, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, position: 'sticky', top: 0, zIndex: 20 }}>
-      <div>
-        <div style={{ fontWeight: 800, fontSize: 18, letterSpacing: '-.02em' }}>{labels[page] || 'Dashboard'}</div>
-        <div style={{ fontSize: 12.5, color: C.faint, marginTop: 1 }}>{now} · Hyderabad Region</div>
+    <div style={{
+      background: `linear-gradient(100deg, ${C.navy}, ${C.navy2})`,
+      color: '#fff', padding: '14px 26px',
+      display: 'flex', alignItems: 'center', gap: 14,
+      boxShadow: '0 2px 14px rgba(10,37,64,.22)',
+      position: 'sticky', top: 0, zIndex: 20,
+    }}>
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="#ff5269" style={{ flexShrink: 0 }}>
+        <path d="M12 2S5 10 5 15a7 7 0 0 0 14 0c0-5-7-13-7-13z"/>
+      </svg>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-.02em' }}>{lbl.title}</div>
+        <div style={{ fontSize: 12, color: '#aebfd4', marginTop: 2 }}>{lbl.sub} · {now}</div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 99, background: C.greenSoft, color: C.greenText, fontSize: 12.5, fontWeight: 700 }}>
-          <span style={{ width: 7, height: 7, borderRadius: 99, background: C.green, animation: 'pulse-slow 1.6s infinite' }} />
-          Agents running
-        </div>
-        <div style={{ width: 38, height: 38, borderRadius: 99, border: `1px solid ${C.line}`, background: '#fff', display: 'grid', placeItems: 'center', position: 'relative', cursor: 'pointer' }}>
-          <Ic n="notifications" z={19} col={C.soft} />
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 9, padding: '6px 12px', fontSize: 12.5, fontWeight: 700, color: '#7fd3a8' }}>
+        <span style={{ width: 7, height: 7, borderRadius: 99, background: '#7fd3a8', animation: 'pulse-slow 1.6s infinite', flexShrink: 0 }} />
+        Agents live
       </div>
     </div>
   );
 }
 
-/* ── stats row ─────────────────────────────────────────────── */
+/* ── stats row — dashboard.html .kpi style ─────────────────── */
+function KpiCard({ v, l, t, tone }) {
+  const valColor = tone === 'alert' ? C.red : tone === 'warn' ? C.amber : tone === 'good' ? C.green : C.ink;
+  return (
+    <div style={{ background: C.surface, borderRadius: 14, padding: '15px 17px', border: `1px solid ${C.line}`, boxShadow: '0 1px 3px rgba(16,32,44,.05)' }}>
+      <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums', color: valColor }}>{v}</div>
+      <div style={{ fontSize: 11.5, color: C.soft, marginTop: 5, textTransform: 'uppercase', letterSpacing: '.4px', fontWeight: 600 }}>{l}</div>
+      <div style={{ fontSize: 11, color: C.faint, marginTop: 3 }}>{t}</div>
+    </div>
+  );
+}
+
 function StatsRow({ data, bridges, churn, urgent }) {
   if (!data) return null;
   const h = data.bridge_health || {};
   const atRisk = h.at_risk || h['at-risk'] || 0;
+  const broken = h.broken || 0;
   const highChurn = churn?.donors?.filter(d => d.churn_risk > 0.6).length || data.high_churn_count || 0;
   const urgentCount = urgent?.count || 0;
-
-  const stats = [
-    { v: (data.total_patients || 0).toLocaleString('en-IN'), l: 'Total patients', sub: 'in network', icon: 'favorite', col: C.ink },
-    { v: (data.total_donors || 0).toLocaleString('en-IN'), l: 'Total donors', sub: 'enrolled', icon: 'volunteer_activism', col: C.green },
-    { v: (data.eligible_donors || 0).toLocaleString('en-IN'), l: 'Eligible now', sub: 'can donate today', icon: 'check_circle', col: C.green },
-    { v: atRisk, l: 'At-risk bridges', sub: `${h.broken || 0} broken`, icon: 'warning', col: atRisk > 0 ? C.amber : C.soft },
-    { v: urgentCount, l: 'Urgent transfusions', sub: 'next 7 days', icon: 'calendar_month', col: urgentCount > 0 ? C.red : C.soft },
-    { v: highChurn, l: 'High churn risk', sub: 'donors to contact', icon: 'forum', col: highChurn > 0 ? C.amber : C.green },
-  ];
+  const eligible = data.eligible_donors || 0;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 20 }}>
-      {stats.map((s, i) => (
-        <div key={i} style={{ background: '#fff', border: `1px solid ${C.line}`, borderRadius: 14, padding: '16px 18px', boxShadow: '0 1px 2px rgba(20,20,30,.04)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-            <Ic n={s.icon} z={20} fill col={s.col} />
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-.03em', color: s.col, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{s.v}</div>
-          <div style={{ fontSize: 12.5, color: C.soft, marginTop: 5, fontWeight: 600 }}>{s.l}</div>
-          <div style={{ fontSize: 11.5, color: C.faint, marginTop: 1 }}>{s.sub}</div>
-        </div>
-      ))}
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14, marginBottom: 18 }}>
+      <KpiCard v={(data.total_patients || 0).toLocaleString('en-IN')} l="Patients" t="in network" tone="good" />
+      <KpiCard v={(data.total_donors || 0).toLocaleString('en-IN')} l="Donors enrolled" t={`${eligible.toLocaleString('en-IN')} eligible now`} tone="good" />
+      <KpiCard v={broken} l="Broken bridges" t={`${atRisk} at-risk`} tone={broken > 0 ? 'alert' : atRisk > 0 ? 'warn' : 'good'} />
+      <KpiCard v={urgentCount} l="Urgent transfusions" t="next 7 days" tone={urgentCount > 0 ? 'alert' : 'good'} />
+      <KpiCard v={highChurn} l="High churn risk" t="donors to contact" tone={highChurn > 3 ? 'alert' : highChurn > 0 ? 'warn' : 'good'} />
     </div>
   );
 }
@@ -223,8 +233,8 @@ function BridgeBoard({ bridges = [], full = false, onHeal }) {
     <div style={{ background: '#fff', border: `1px solid ${C.line}`, borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 2px rgba(20,20,30,.04)' }}>
       <div style={{ padding: '16px 18px 12px', borderBottom: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-.02em' }}>Bridge Health Board</div>
-          <div style={{ fontSize: 12.5, color: C.faint, marginTop: 1 }}>Every patient bridge · updated live</div>
+          <div style={{ fontWeight: 700, fontSize: 13, letterSpacing: '.5px', textTransform: 'uppercase', color: C.navy }}>Bridge Health Board</div>
+          <div style={{ fontSize: 12, color: C.faint, marginTop: 2 }}>Every patient bridge · updated live</div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           {['all', 'full', 'at-risk', 'broken'].map(f => (
@@ -633,7 +643,7 @@ export default function AdminDashboard({ onLogout }) {
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar onLogout={onLogout} />
-      <div style={{ flex: 1, background: C.bg, overflowY: 'auto', height: '100vh' }}>
+      <div style={{ flex: 1, background: '#eef2f7', overflowY: 'auto', height: '100vh' }}>
         <Routes>
           <Route index element={<><TopBar page="dashboard" /><DashboardHome /></>} />
           <Route path="bridges" element={<><TopBar page="bridges" /><BridgesPage /></>} />

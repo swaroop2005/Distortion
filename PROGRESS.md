@@ -10,13 +10,14 @@ something so we both always know the state of play. Newest entries at the top of
 
 ## Current status
 
-🟢 **Building LIVE — two halves merged into ONE system.** Vijetha's `optimizer/` + `project/`
-(supply side) merged into branch `scaffold-and-design` alongside ThalNet (donor/coordination
-side). **Direction = 2-layer system:** Layer 1 Supply Command Center (predict shortage + optimize
-+ mobilization plan + dashboard, BUILT) → seam (`mobilization_plan.csv`) → Layer 2 ThalNet
-autonomous coordination. **Real national e-RaktKosh data now in repo** (3,863 banks, 44,675 rows)
-→ kills the "tiny dataset" weakness. **Blocker:** Bedrock Haiku access + AWS budget alarm not yet
-confirmed — long pole.
+🟡 **EC2 LIVE, Bedrock LIVE, frontend blank-screen bug open.**
+- EC2: `http://100.48.60.79` (port 80 dead, use **port 3000**)
+- Frontend: `http://100.48.60.79:3000` — React app served via `serve -s dist -l 3000`
+- Backend: `http://100.48.60.79:8000` — FastAPI + uvicorn, `THALNET_LLM_BACKEND=bedrock`
+- Bedrock: **LIVE** — `us.anthropic.claude-haiku-4-5-20251001-v1:0` (inference profile, required)
+- IAM role `ThalNet-EC2-Bedrock` attached to EC2 (BedrockFullAccess)
+- SSH key: `~/Downloads/launch1.pem` · AWS CLI at `~/aws-cli-install/aws-cli/aws`
+- **OPEN BUG:** Admin dashboard shows blank white screen after clicking Admin on landing page. Error boundary added to App.jsx to catch + display crash. Next step: load page, read the red error box, fix root cause.
 
 ## Locked scope (this session)
 **Flagship = Auto-Bridge Builder** (8→1 bridge: auto-form + eligibility-stagger + self-heal +
@@ -145,6 +146,18 @@ Bedrock Haiku + budget alarm in parallel. Then #5 FastAPI matching, then loop, t
   Carrier screening already exists → correctly cut.
 
 ## Daily log (newest first)
+### 2026-06-07 (session 4)
+- **✅ IAM role created + attached** — `ThalNet-EC2-Bedrock` (BedrockFullAccess) created via AWS CLI (`~/aws-cli-install/aws-cli/aws`), attached to instance `i-0de8eb69a379a6e08`. No sudo needed — CLI installed to `~/aws-cli-install/` without system install. — _Claude_
+- **✅ Bedrock model ID fixed** — `anthropic.claude-haiku-4-5` → `us.anthropic.claude-haiku-4-5-20251001-v1:0` (inference profile required for on-demand; bare model ID rejected). Chat endpoint returns real AI responses. — _Claude_
+- **✅ Frontend fixed: VITE_API_URL** — Build was baking `localhost` as API base. Fixed: always build on EC2 with `VITE_API_URL="http://100.48.60.79:8000"`, or rsync local dist built with same var. — _Claude_
+- **✅ Frontend port 3000** — Port 80 needs sudo (no tty in SSH). Frontend now served on 3000. Security group opened for 3000 via CLI. — _Claude_
+- **✅ Admin dashboard redesigned** — NavBar → navy gradient (`#0a2540→#13355c`) matching `dashboard.html`. Sidebar navy + red active state + blood drop SVG. KPI cards → dashboard.html `.kpi` style (26px bold, `alert/warn/good` color tones, uppercase labels). Background `#eef2f7`. — _Claude_
+- **⚠️ OPEN BUG: Admin blank screen** — After clicking Admin on landing, dashboard shows white. Error boundary added to `App.jsx` (red error box on crash). Next session: restart serve, load page, read error message, fix root cause. Backend all 200 OK — issue is React render crash. — _Claude_
+
+### 2026-06-07 (session 3)
+- **✅ Bedrock Haiku 4.5 wired to EC2** — Updated `backend/app/services/outreach.py` model_id from retired `anthropic.claude-3-haiku-20240307-v1:0` → `anthropic.claude-haiku-4-5` ($1/$5 per 1M tokens, cheapest active model). Chatbot (`services/chatbot.py`) auto-uses same LLM via shared `get_llm()` — no extra wiring needed. Fixed `backend/app/main.py` wrong import (`from .store` → `from .services.store`). Created missing `backend/__init__.py`. Deployed to EC2 with `THALNET_LLM_BACKEND=bedrock`. **Pending:** attach IAM role with BedrockFullAccess to EC2 instance (Vijetha via AWS Console) → then verify with `POST /chat`. — _Claude_
+- **✅ Swaroop's session-2 redesign pulled + deployed** — Synced latest code from main (Swaroop's ThalNet design system redesign). `frontend/src/design.jsx` + rewritten App.jsx, Navbar, dashboards. Built on EC2 (37 modules, 0 errors). Frontend serving at `http://100.48.60.79`. — _Claude_
+
 ### 2026-06-07 (session 2)
 - **✅ React frontend fully redesigned to match ThalNet HTML design quality** — 9 files rewritten. Added Plus Jakarta Sans + IBM Plex Mono + Material Symbols Rounded fonts. Created `frontend/src/design.jsx` with shared primitives (Icon, Card, Btn, Badge, Eyebrow, IntegrityBadge, Spinner, ErrBox). LandingPage: hero + stats + "how it works" + RoleCards + dark footer. AdminDashboard: dark sidebar (220px, #16171c) + command center dark header + 6-col KPI grid + blood-group bars + bridge health — sidebar uses React Router Links with active state; admin gets NO top Navbar/ChatWidget. PatientPortal: styled centered ID input (auth-modal style, demo IDs, icon-prefixed input) → PatientView with transfusion headline card, bridge viz (8 donor circles, color-coded), timeline, urgent modal. DonorPortal: styled ID input → DonorView with clock hero (green/dark card), connection inbox matching DonorView design, quiet impact section. Navbar redesigned with Material Symbols + CSS vars. Vite build: ✓ 0 errors, 37 modules. — _Claude_
 
