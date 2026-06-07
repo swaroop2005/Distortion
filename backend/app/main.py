@@ -93,6 +93,9 @@ async def seed_bridges() -> None:
 app.include_router(admin.router)
 app.include_router(supply_routes.router)
 
+# Admin management (RBAC-protected)
+app.include_router(admin.router)
+
 # Public portals
 app.include_router(donors.router)
 app.include_router(patients.router)
