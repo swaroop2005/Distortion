@@ -32,6 +32,8 @@ backend/app/services/voice.py     shared empathy layer (tone guide + exemplars)
 backend/app/services/knowledge.py curated cite-able FAQ
 backend/app/services/wellness.py  role-filtered cited wellness suggestions (diet/hydration/emotional)
 data/wellness_suggestions.csv     curated wellness bank (audience + caution_flag + source)
+backend/app/services/community_store.py  writable store: blood requests, connections, messages (DynamoDB-ready seam)
+backend/app/routers/connections.py       /community/* donor<->patient connection endpoints
 backend/app/routers/        patients,donors,admin,agent,supply_routes (32 endpoints)
 models/*.pkl                churn(0.968ROC) + responsiveness(0.865proxy)
 data/clean.csv              7033rows, Hyderabad, 132 geo pts
