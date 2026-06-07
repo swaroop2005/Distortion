@@ -5,9 +5,12 @@ import AdminDashboard from './pages/Admin/AdminDashboard';
 import DonorPortal from './pages/Portal/DonorPortal';
 import PatientPortal from './pages/Portal/PatientPortal';
 import Navbar from './components/Navbar';
+import ChatWidget from './components/ChatWidget';
 
 export default function App() {
   const [role, setRole] = useState(null);
+  // Shared signed-in id: portals set it on lookup; assistant + community use it.
+  const [userId, setUserId] = useState(null);
 
   if (!role) {
     return <LandingPage onSelectRole={setRole} />;
@@ -16,7 +19,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-gray-50">
-        <Navbar role={role} onLogout={() => setRole(null)} />
+        <Navbar role={role} onLogout={() => { setRole(null); setUserId(null); }} />
         <Routes>
           <Route path="/" element={
             role === 'admin' ? <Navigate to="/admin" replace /> :
@@ -24,9 +27,10 @@ export default function App() {
             <Navigate to="/patient" replace />
           } />
           <Route path="/admin/*" element={role === 'admin' ? <AdminDashboard /> : <Navigate to="/" replace />} />
-          <Route path="/donor/*" element={<DonorPortal />} />
-          <Route path="/patient/*" element={<PatientPortal />} />
+          <Route path="/donor/*" element={<DonorPortal userId={userId} setUserId={setUserId} />} />
+          <Route path="/patient/*" element={<PatientPortal userId={userId} setUserId={setUserId} />} />
         </Routes>
+        <ChatWidget role={role} userId={userId} />
       </div>
     </BrowserRouter>
   );
